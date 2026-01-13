@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
+                             http://maven.apache.org/maven-v4_0_0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+	<groupId>org.jboss.tools.rsp</groupId>
+	<artifactId>parent</artifactId>
+	<version>0.26.18-SNAPSHOT</version>
+	<packaging>pom</packaging>
+	<name>Runtime Server Protocol</name>
+	<description>A runtime-server protocol based on LSP</description>
+
+	<properties>
+		<maven.compiler.release>8</maven.compiler.release>
+	</properties>
+
+	<modules>
+		<module>api</module>
+		<module>client</module>
+		<module>framework</module>
+		<module>runtimes</module>
+	</modules>
+
+  	<build>
+    	<pluginManagement>
+      	<plugins>
+        	<plugin>
+          	<groupId>org.apache.maven.plugins</groupId>
+          	<artifactId>maven-compiler-plugin</artifactId>
+          	<version>3.11.0</version>
+        	</plugin>
+      	</plugins>
+    	</pluginManagement>
+  	</build>
+
+	<distributionManagement>
+ 		<repository>
+			<id>${jboss.releases.repo.id}</id>
+			<name>JBoss Releases Repository</name>
+ 			<url>${jboss.releases.repo.url}</url>
+		</repository>
+		<snapshotRepository>
+			<id>${jboss.snapshots.repo.id}</id>
+			<name>JBoss Snapshots Repository</name>
+			<url>${jboss.snapshots.repo.url}</url>
+		</snapshotRepository>
+	</distributionManagement>
+</project>

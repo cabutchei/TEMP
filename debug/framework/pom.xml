@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
+                             http://maven.apache.org/maven-v4_0_0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <parent>
+    <groupId>org.jboss.tools.rsp</groupId>
+    <artifactId>parent</artifactId>
+    <version>0.26.18-SNAPSHOT</version>
+  </parent>
+  <artifactId>framework</artifactId>
+  <groupId>org.jboss.tools.rsp</groupId>
+  <packaging>jar</packaging>
+
+
+	<dependencies>
+
+  <dependency>
+   <groupId>org.jboss.tools.rsp</groupId> 
+   <artifactId>api</artifactId>
+   <version>${project.version}</version>
+  </dependency>
+
+		<dependency>
+			<groupId>org.apache.httpcomponents</groupId>
+			<artifactId>httpclient</artifactId>
+			<version>4.0.1</version>
+			<scope>system</scope>
+			<systemPath>${project.basedir}/lib/httpclient-4.0.1.jar</systemPath>
+		</dependency>
+
+		<dependency>
+			<groupId>org.apache.httpcomponents</groupId>
+			<artifactId>httpcore</artifactId>
+			<version>4.0.1</version>
+			<scope>system</scope>
+			<systemPath>${project.basedir}/lib/httpcore-4.0.1.jar</systemPath>
+		</dependency>
+
+		<dependency>
+			<groupId>org.jboss.logging</groupId>
+			<artifactId>jboss-logging</artifactId>
+			<version>3.1.2.GA</version>
+			<scope>system</scope>
+			<systemPath>${project.basedir}/lib/jboss-logging-3.1.2.GA.jar</systemPath>
+		</dependency>
+
+		<dependency>
+			<groupId>org.yaml</groupId>
+			<artifactId>snakeyaml</artifactId>
+			<version>1.10</version>
+			<scope>system</scope>
+			<systemPath>${project.basedir}/lib/snakeyaml-1.10.jar</systemPath>
+		</dependency>
+
+		<dependency>
+			<groupId>org.jboss.tools.rsp</groupId>
+			<artifactId>stacks-client</artifactId>
+			<version>1.0.3.Final</version>
+			<scope>system</scope>
+			<systemPath>${project.basedir}/lib/stacks-client-1.0.3.Final.jar</systemPath>
+		</dependency>
+
+    <dependency>
+			<groupId>org.slf4j</groupId>
+			<artifactId>slf4j-api</artifactId>
+			<version>2.0.17</version>
+    </dependency>
+
+    <dependency>
+			<groupId>org.osgi</groupId>
+			<artifactId>org.osgi.framework</artifactId>
+			<version>1.10.0</version>
+    </dependency>
+
+    <dependency>
+			<groupId>org.osgi</groupId>
+			<artifactId>org.osgi.service.log</artifactId>
+			<version>1.5.0</version>
+    </dependency>
+
+    <dependency>
+			<groupId>org.osgi</groupId>
+			<artifactId>org.osgi.util.tracker</artifactId>
+			<version>1.5.4</version>
+    </dependency>
+
+    <dependency>
+      <groupId>ch.qos.logback</groupId>
+      <artifactId>logback-classic</artifactId>
+			  <version>1.4.14</version>
+    </dependency>
+
+    <dependency>
+        <groupId>org.apache.commons</groupId>
+        <artifactId>commons-compress</artifactId>
+        <version>1.27.1</version>
+    </dependency>
+    
+    <dependency>
+        <groupId>org.eclipse.lsp4j</groupId>
+        <artifactId>org.eclipse.lsp4j.jsonrpc</artifactId>
+        <version>0.10.0</version>
+    </dependency> 
+
+  </dependencies>
+
+</project>

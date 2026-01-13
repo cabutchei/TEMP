@@ -1,0 +1,38 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "java",
+            "name": "Attach",
+            "projectName": "framework",
+            "request": "attach",
+            "hostName": "127.0.0.1",
+            "port": "5005",
+            "timeout": 60000
+        },
+        {
+            "type": "java",
+            "name": "ServerManagementCLI",
+            "request": "launch",
+            "mainClass": "org.jboss.tools.rsp.client.cli.ServerManagementCLI",
+            "projectName": "client"
+        },
+        {
+            "type": "java",
+            "name": "ServerManagementServerLauncher",
+            "request": "launch",
+            "mainClass": "org.jboss.tools.rsp.server.ServerManagementServerLauncher",
+            "projectName": "framework"
+        },
+        {
+            "type": "java",
+            "name": "LibertyServerMain",
+            "request": "launch",
+            "mainClass": "org.jboss.tools.rsp.server.liberty.impl.LibertyServerMain",
+            "projectName": "runtimes"
+        }
+    ]
+}
