@@ -1,0 +1,21 @@
+{
+	"folders": [
+		{
+			"name": "vscode-server-connector",
+			"path": "../.."
+		},
+		{
+			"name": "vscode-server-connector-api",
+			"path": "../../../vscode-server-connector-api"
+		},
+		{
+			"name": "rsp-client",
+			"path": "../../../rsp-client"
+		},
+		{
+			"name": "vscode-rsp-ui",
+			"path": "../../../vscode-rsp-ui"
+		}
+	],
+	"settings": {}
+}
