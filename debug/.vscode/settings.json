@@ -1,0 +1,15 @@
+{
+    "java.configuration.updateBuildConfiguration": "automatic",
+    "java.configuration.runtimes": [
+        {
+            "name": "JavaSE-1.8",
+            "path": "/Users/cabutchei/.sdkman/candidates/java/8.0.472-librca/",
+            // "default": true
+        },
+        {
+            "name": "JavaSE-17",
+            "path": "/Users/cabutchei/.sdkman/candidates/java/17.0.12-oracle/",
+            "default": true
+        }
+    ]
+}
