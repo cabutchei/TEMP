@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0                              http://maven.apache.org/maven-v4_0_0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>com.github.cabutchei</groupId>
+        <artifactId>bundles</artifactId>
+        <version>0.26.18-SNAPSHOT</version>
+    </parent>
+    <groupId>com.github.cabutchei</groupId>
+    <artifactId>com.github.cabutchei.rsp.workspace.eclipse</artifactId>
+    <packaging>jar</packaging>
+    <name>Runtime Server Protocol : Eclipse Workspace</name>
+    <dependencies>
+        <dependency>
+            <groupId>com.github.cabutchei</groupId>
+            <artifactId>com.github.cabutchei.rsp.server.generic</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.github.cabutchei</groupId>
+            <artifactId>com.github.cabutchei.rsp.api</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.eclipse.jdt</groupId>
+            <artifactId>core</artifactId>
+            <version>3.17.0</version>
+            <scope>system</scope>
+            <systemPath>${product.plugins.dir}/org.eclipse.jdt.core_3.17.0.v20190227-1706.jar</systemPath>
+        </dependency>
+        <dependency>
+            <groupId>org.eclipse.jdt</groupId>
+            <artifactId>launching</artifactId>
+            <version>3.13.0</version>
+            <scope>system</scope>
+            <systemPath>${product.plugins.dir}/org.eclipse.jdt.launching_3.13.0.v20190222-0937.jar</systemPath>
+        </dependency>
+    </dependencies>
+</project>

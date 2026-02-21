@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0                              http://maven.apache.org/maven-v4_0_0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>com.github.cabutchei</groupId>
+        <artifactId>bundles</artifactId>
+        <version>0.26.18-SNAPSHOT</version>
+    </parent>
+    <groupId>com.github.cabutchei</groupId>
+    <artifactId>com.github.cabutchei.rsp.server.liberty</artifactId>
+    <packaging>jar</packaging>
+    <dependencies>
+        <dependency>
+            <groupId>com.github.cabutchei</groupId>
+            <artifactId>com.github.cabutchei.rsp.server.generic</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.github.cabutchei</groupId>
+            <artifactId>com.github.cabutchei.rsp.api</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.github.cabutchei</groupId>
+            <artifactId>com.github.cabutchei.rsp.server.wst</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.eclipse.lsp4j</groupId>
+            <artifactId>org.eclipse.lsp4j.jsonrpc</artifactId>
+            <version>0.24.0</version>
+            <scope>system</scope>
+            <systemPath>${product.plugins.dir}/org.eclipse.lsp4j.jsonrpc_0.10.0.v20201105-1103.jar</systemPath>
+        </dependency>
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+            <version>2.0.17</version>
+            <scope>system</scope>
+            <systemPath>${product.plugins.dir}/slf4j.api_1.7.28.jar</systemPath>
+        </dependency>
+        <dependency>
+            <groupId>org.osgi</groupId>
+            <artifactId>org.osgi.framework</artifactId>
+            <version>1.10.0</version>
+            <scope>system</scope>
+            <systemPath>${product.plugins.dir}/org.eclipse.osgi_3.13.300.v20190218-1622.jar</systemPath>
+        </dependency>
+        <!-- <dependency>
+        		<groupId>org.eclipse.lsp4j</groupId>
+        		<artifactId>org.eclipse.lsp4j.jsonrpc.json.adapters</artifactId>
+        		<version>0.24.0</version>
+    		
+        		<scope>system</scope>
+        		<systemPath>${product.plugins.dir}/org.eclipse.lsp4j.jsonrpc_0.10.0.v20201105-1103.jar</systemPath>
+</dependency>
+		<dependency>
+        		<groupId>org.eclipse.lsp4j</groupId>
+        		<artifactId>org.eclipse.lsp4j.jsonrpc.messages</artifactId>
+        		<version>0.24.0</version>
+    		
+        		<scope>system</scope>
+        		<systemPath>${product.plugins.dir}/org.eclipse.lsp4j.jsonrpc_0.10.0.v20201105-1103.jar</systemPath>
+</dependency>
+		<dependency>
+        		<groupId>org.eclipse.lsp4j</groupId>
+        		<artifactId>org.eclipse.lsp4j.jsonrpc.services</artifactId>
+        		<version>0.24.0</version>
+    		
+        		<scope>system</scope>
+        		<systemPath>${product.plugins.dir}/org.eclipse.lsp4j.jsonrpc_0.10.0.v20201105-1103.jar</systemPath>
+</dependency>
+		<dependency>
+        		<groupId>org.eclipse.lsp4j</groupId>
+        		<artifactId>org.eclipse.lsp4j.jsonrpc.validation</artifactId>
+        		<version>0.24.0</version>
+    		
+        		<scope>system</scope>
+        		<systemPath>${product.plugins.dir}/org.eclipse.lsp4j.jsonrpc_0.10.0.v20201105-1103.jar</systemPath>
+</dependency> -->
+        <!-- add any other bundles whose classes WildflyServerMain touches -->
+    </dependencies>
+</project>
