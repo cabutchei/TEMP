@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0                              http://maven.apache.org/maven-v4_0_0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>com.github.cabutchei</groupId>
+        <artifactId>runtimes</artifactId>
+        <version>0.26.18-SNAPSHOT</version>
+    </parent>
+    <groupId>com.github.cabutchei</groupId>
+    <artifactId>bundles</artifactId>
+    <packaging>pom</packaging>
+    <modules>
+        <module>com.github.cabutchei.rsp.workspace.eclipse</module>
+        <module>com.github.cabutchei.rsp.server.eap</module>
+        <module>com.github.cabutchei.rsp.server.liberty</module>
+        <module>com.github.cabutchei.rsp.server.websphere</module>
+        <module>com.github.cabutchei.rsp.server.wst</module>
+    </modules>
+</project>

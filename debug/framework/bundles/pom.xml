@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0                              http://maven.apache.org/maven-v4_0_0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>com.github.cabutchei</groupId>
+        <artifactId>parent</artifactId>
+        <version>0.26.18-SNAPSHOT</version>
+        <relativePath>../../pom.xml</relativePath>
+    </parent>
+    <groupId>com.github.cabutchei</groupId>
+    <artifactId>framework-bundles</artifactId>
+    <packaging>pom</packaging>
+    <modules>
+        <module>com.github.cabutchei.rsp.logging</module>
+        <module>com.github.cabutchei.rsp.secure</module>
+        <module>com.github.cabutchei.rsp.launching</module>
+        <module>com.github.cabutchei.rsp.launching.java</module>
+        <module>com.github.cabutchei.rsp.foundation.core</module>
+        <module>com.github.cabutchei.rsp.server</module>
+        <module>com.github.cabutchei.rsp.server.generic</module>
+        <module>com.github.cabutchei.rsp.server.spi</module>
+        <module>com.github.cabutchei.rsp.stacks.core</module>
+        <module>com.github.cabutchei.rsp.runtime.core</module>
+    </modules>
+</project>

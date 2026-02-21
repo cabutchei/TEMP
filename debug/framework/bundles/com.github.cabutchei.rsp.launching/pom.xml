@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0                              http://maven.apache.org/maven-v4_0_0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>com.github.cabutchei</groupId>
+        <artifactId>framework-bundles</artifactId>
+        <version>0.26.18-SNAPSHOT</version>
+    </parent>
+    <groupId>com.github.cabutchei</groupId>
+    <artifactId>com.github.cabutchei.rsp.launching</artifactId>
+    <packaging>jar</packaging>
+    <name>com.github.cabutchei.rsp.launching</name>
+    <dependencies>
+        <dependency>
+            <groupId>com.google</groupId>
+            <artifactId>gson</artifactId>
+            <version>2.8.7.v20210624-1215</version>
+            <scope>system</scope>
+            <systemPath>${product.plugins.dir}/com.google.gson_2.8.7.v20210624-1215.jar</systemPath>
+        </dependency>
+        <dependency>
+            <groupId>org.eclipse</groupId>
+            <artifactId>osgi</artifactId>
+            <version>3.13.300.v20190218-1622</version>
+            <scope>system</scope>
+            <systemPath>${product.plugins.dir}/org.eclipse.osgi_3.13.300.v20190218-1622.jar</systemPath>
+        </dependency>
+        <dependency>
+            <groupId>org.eclipse.osgi</groupId>
+            <artifactId>services</artifactId>
+            <version>3.8.0.v20190206-2147</version>
+            <scope>system</scope>
+            <systemPath>${product.plugins.dir}/org.eclipse.osgi.services_3.8.0.v20190206-2147.jar</systemPath>
+        </dependency>
+        <dependency>
+            <groupId>slf4j</groupId>
+            <artifactId>api</artifactId>
+            <version>1.7.28</version>
+            <scope>system</scope>
+            <systemPath>${product.plugins.dir}/slf4j.api_1.7.28.jar</systemPath>
+        </dependency>
+    </dependencies>
+</project>
