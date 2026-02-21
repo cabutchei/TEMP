@@ -67,13 +67,12 @@
             <systemPath>${product.plugins.dir}/org.eclipse.emf.ecore.xmi_2.15.0.v20180706-1146.jar</systemPath>
         </dependency>
         <!-- <dependency>
-                        <groupId>org.eclipse.core</groupId>
-                        <artifactId>commands</artifactId>
-                        <version>3.3.0-I20070605-0010</version>
-                
-                        <scope>system</scope>
-                        <systemPath>${product.plugins.dir}/org.eclipse.core.commands_3.9.300.v20190215-1957.jar</systemPath>
-</dependency> -->
+            <groupId>org.eclipse.core</groupId>
+            <artifactId>commands</artifactId>
+            <version>3.3.0-I20070605-0010</version>
+            <scope>system</scope>
+            <systemPath>${product.plugins.dir}/org.eclipse.core.commands_3.9.300.v20190215-1957.jar</systemPath>
+        </dependency> -->
         <dependency>
             <groupId>org.eclipse.core</groupId>
             <artifactId>org.eclipse.core.resources</artifactId>
@@ -82,25 +81,18 @@
             <systemPath>${product.plugins.dir}/org.eclipse.core.resources_3.13.300.v20190218-2054.jar</systemPath>
         </dependency>
         <!-- <dependency>
-                        <groupId>org.eclipse.core.resources</groupId>
-                        <artifactId>org.eclipse.core.resources</artifactId>
-                        <version>3.22.100.v20250206-1238</version>
-                        <scope>system</scope>
-                        <systemPath>${product.plugins.dir}/org.eclipse.core.resources_3.13.300.v20190218-2054.jar</systemPath>
-                </dependency> -->
+            <groupId>org.eclipse.core.resources</groupId>
+            <artifactId>org.eclipse.core.resources</artifactId>
+            <version>3.22.100.v20250206-1238</version>
+            <scope>system</scope>
+            <systemPath>${product.plugins.dir}/org.eclipse.core.resources_3.13.300.v20190218-2054.jar</systemPath>
+        </dependency> -->
         <dependency>
             <groupId>com.ibm.ws.st</groupId>
             <artifactId>core</artifactId>
             <version>1.0.909</version>
             <scope>system</scope>
             <systemPath>${product.plugins.dir}/com.ibm.ws.st.core_1.0.909.v2025-11-20_1302.jar</systemPath>
-        </dependency>
-        <dependency>
-            <groupId>com.ibm.ws.st</groupId>
-            <artifactId>ui</artifactId>
-            <version>1.0.909</version>
-            <scope>system</scope>
-            <systemPath>${product.plugins.dir}/com.ibm.ws.st.ui_1.0.711.v2025-05-12_2016.jar</systemPath>
         </dependency>
         <dependency>
             <groupId>org.eclipse.equinox.app</groupId>
@@ -110,13 +102,13 @@
             <systemPath>${product.plugins.dir}/org.eclipse.equinox.app_1.4.100.v20190215-2139.jar</systemPath>
         </dependency>
         <!-- <dependency>
-                        <groupId>org.eclipse.wst.server</groupId>
-                        <artifactId>core</artifactId>
-                        <version>1.0.205-v20070829b</version>
+            <groupId>org.eclipse.wst.server</groupId>
+            <artifactId>core</artifactId>
+            <version>1.0.205-v20070829b</version>
                 
-                        <scope>system</scope>
-                        <systemPath>${product.plugins.dir}/org.eclipse.wst.server.core_1.10.0.v201901310132.jar</systemPath>
-</dependency> -->
+            <scope>system</scope>
+            <systemPath>${product.plugins.dir}/org.eclipse.wst.server.core_1.10.0.v201901310132.jar</systemPath>
+        </dependency> -->
         <dependency>
             <groupId>org.eclipse.wst.common</groupId>
             <artifactId>core</artifactId>
@@ -146,13 +138,6 @@
             <systemPath>${product.plugins.dir}/org.eclipse.wst.server.discovery_1.3.100.v201902142141.jar</systemPath>
         </dependency>
         <dependency>
-            <groupId>org.eclipse.wst.server</groupId>
-            <artifactId>ui</artifactId>
-            <version>1.4.100</version>
-            <scope>system</scope>
-            <systemPath>${product.plugins.dir}/org.eclipse.wst.server.ui_1.6.300.v202508220455.jar</systemPath>
-        </dependency>
-        <dependency>
             <groupId>com.ibm.ws.ast.st.v85</groupId>
             <artifactId>core</artifactId>
             <version>1.0.401</version>
@@ -160,13 +145,12 @@
             <systemPath>${product.plugins.dir}/com.ibm.ws.ast.st.v85.core_1.0.401.v20251120_1402.jar</systemPath>
         </dependency>
         <!-- <dependency>
-                        <groupId>org.eclipse.core.runtime</groupId>
-                        <artifactId>org.eclipse.core.runtime</artifactId>
-                        <version>3.9.100.v20131218</version>
-                
-                        <scope>system</scope>
-                        <systemPath>${product.plugins.dir}/org.eclipse.core.runtime_3.15.200.v20190219-1009.jar</systemPath>
-</dependency> -->
+            <groupId>org.eclipse.core.runtime</groupId>
+            <artifactId>org.eclipse.core.runtime</artifactId>
+            <version>3.9.100.v20131218</version>
+            <scope>system</scope>
+            <systemPath>${product.plugins.dir}/org.eclipse.core.runtime_3.15.200.v20190219-1009.jar</systemPath>
+        </dependency> -->
         <dependency>
             <groupId>org.eclipse.core.runtime</groupId>
             <artifactId>org.eclipse.core.runtime</artifactId>
@@ -184,13 +168,13 @@
         </dependency>
         <!-- https://mvnrepository.com/artifact/org.eclipse.equinox/org.eclipse.equinox.common -->
         <!-- <dependency>
-                        <groupId>org.eclipse.equinox</groupId>
-                        <artifactId>org.eclipse.equinox.common</artifactId>
-                        <version>3.6.0</version>
+            <groupId>org.eclipse.equinox</groupId>
+            <artifactId>org.eclipse.equinox.common</artifactId>
+            <version>3.6.0</version>
                 
-                        <scope>system</scope>
-                        <systemPath>${product.plugins.dir}/org.eclipse.equinox.common_3.10.300.v20190218-2100.jar</systemPath>
-</dependency> -->
+            <scope>system</scope>
+            <systemPath>${product.plugins.dir}/org.eclipse.equinox.common_3.10.300.v20190218-2100.jar</systemPath>
+        </dependency> -->
         <dependency>
             <groupId>org.eclipse.equinox</groupId>
             <artifactId>org.eclipse.equinox.common</artifactId>
@@ -204,13 +188,6 @@
             <version>3.22.100.v20250129-1642</version>
             <scope>system</scope>
             <systemPath>${product.plugins.dir}/org.eclipse.debug.core_3.13.200.v20190216-1557.jar</systemPath>
-        </dependency>
-        <dependency>
-            <groupId>org.eclipse.debug</groupId>
-            <artifactId>ui</artifactId>
-            <version>3.22.100.v20250129-1642</version>
-            <scope>system</scope>
-            <systemPath>${product.plugins.dir}/org.eclipse.debug.ui_3.18.700.v20250122-1213.jar</systemPath>
         </dependency>
         <dependency>
             <groupId>org.apache.felix</groupId>
