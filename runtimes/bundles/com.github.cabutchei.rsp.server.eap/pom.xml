@@ -29,14 +29,14 @@
         <dependency>
             <groupId>org.jboss.ide.eclipse.as</groupId>
             <artifactId>core</artifactId>
-            <version>3.6.2</version>
+            <version>3.6.2.v20190320-1438</version>
             <scope>system</scope>
             <systemPath>${product.plugins.dir}/org.jboss.ide.eclipse.as.core_3.6.2.v20190320-1438.jar</systemPath>
         </dependency>
         <dependency>
             <groupId>org.jboss.ide.eclipse.as.wtp</groupId>
             <artifactId>core</artifactId>
-            <version>3.6.2</version>
+            <version>3.6.2.v20190304-1841</version>
             <scope>system</scope>
             <systemPath>${product.plugins.dir}/org.jboss.ide.eclipse.as.wtp.core_3.6.2.v20190304-1841.jar</systemPath>
         </dependency>

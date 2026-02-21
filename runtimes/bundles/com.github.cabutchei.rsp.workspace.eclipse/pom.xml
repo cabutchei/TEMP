@@ -24,14 +24,14 @@
         <dependency>
             <groupId>org.eclipse.jdt</groupId>
             <artifactId>core</artifactId>
-            <version>3.17.0</version>
+            <version>3.17.0.v20190227-1706</version>
             <scope>system</scope>
             <systemPath>${product.plugins.dir}/org.eclipse.jdt.core_3.17.0.v20190227-1706.jar</systemPath>
         </dependency>
         <dependency>
             <groupId>org.eclipse.jdt</groupId>
             <artifactId>launching</artifactId>
-            <version>3.13.0</version>
+            <version>3.13.0.v20190222-0937</version>
             <scope>system</scope>
             <systemPath>${product.plugins.dir}/org.eclipse.jdt.launching_3.13.0.v20190222-0937.jar</systemPath>
         </dependency>

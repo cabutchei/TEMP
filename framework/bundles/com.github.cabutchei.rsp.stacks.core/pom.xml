@@ -52,9 +52,9 @@
         <dependency>
             <groupId>thirdparty</groupId>
             <artifactId>jboss-logging-3.1.2.GA</artifactId>
-            <version>jboss-logging-3.1.2.GA</version>
+            <version>3.1.2.GA</version>
             <scope>system</scope>
-            <systemPath>${product.plugins.dir}/jboss-logging-3.1.2.GA.jar</systemPath>
+            <systemPath>${project.basedir}/../../lib/jboss-logging-3.1.2.GA.jar</systemPath>
         </dependency>
         <dependency>
             <groupId>org.yaml</groupId>
