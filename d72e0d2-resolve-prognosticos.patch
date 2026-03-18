@@ -1,0 +1,103 @@
+From d72e0d2886ed17e97fccfcb11a31806d48f19fff Mon Sep 17 00:00:00 2001
+From: cabutchei <luropa_paz@hotmail.com>
+Date: Wed, 18 Mar 2026 15:53:53 -0300
+Subject: [PATCH] =?UTF-8?q?resolve=20progn=C3=B3sticos?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+---
+ .../servico/compra/NuvemIntegracaoAposta.java |  2 ++
+ .../ControlaIntegracaoCompraBean.java         | 30 +++++++++++++++----
+ 2 files changed, 27 insertions(+), 5 deletions(-)
+
+diff --git a/silce/silce-dominio/src/br/gov/caixa/silce/dominio/servico/compra/NuvemIntegracaoAposta.java b/silce/silce-dominio/src/br/gov/caixa/silce/dominio/servico/compra/NuvemIntegracaoAposta.java
+index f53cfef..642425d 100644
+--- a/silce/silce-dominio/src/br/gov/caixa/silce/dominio/servico/compra/NuvemIntegracaoAposta.java
++++ b/silce/silce-dominio/src/br/gov/caixa/silce/dominio/servico/compra/NuvemIntegracaoAposta.java
+@@ -38,6 +38,8 @@ public class NuvemIntegracaoAposta extends DTONuvem implements IdLegado, IdNuvem
+ 
+     public Integer qtdTeimosinhas;
+ 
++    public String prognostico;
++
+     public NuvemIntegracaoAposta() {
+     }
+ 
+diff --git a/silce/silce-negocio/ejbModule/br/gov/caixa/silce/negocio/integracaocompra/ControlaIntegracaoCompraBean.java b/silce/silce-negocio/ejbModule/br/gov/caixa/silce/negocio/integracaocompra/ControlaIntegracaoCompraBean.java
+index 65009b8..9b2c371 100644
+--- a/silce/silce-negocio/ejbModule/br/gov/caixa/silce/negocio/integracaocompra/ControlaIntegracaoCompraBean.java
++++ b/silce/silce-negocio/ejbModule/br/gov/caixa/silce/negocio/integracaocompra/ControlaIntegracaoCompraBean.java
+@@ -1,6 +1,5 @@
+ package br.gov.caixa.silce.negocio.integracaocompra;
+ 
+-import java.util.ArrayList;
+ import java.util.Calendar;
+ import java.util.Date;
+ import java.util.HashMap;
+@@ -32,6 +31,10 @@ import br.gov.caixa.silce.dominio.entidade.ReservaCotaBolaoPK;
+ import br.gov.caixa.silce.dominio.entidade.ModalidadeJogo.Modalidade;
+ import br.gov.caixa.silce.dominio.entidade.SituacaoCompra;
+ import br.gov.caixa.silce.dominio.jogos.IndicadorSurpresinha;
++import br.gov.caixa.silce.dominio.jogos.PalpitesLoteca;
++import br.gov.caixa.silce.dominio.jogos.PalpitesLotogol;
++import br.gov.caixa.silce.dominio.jogos.PalpitesSequenciais;
++import br.gov.caixa.silce.dominio.jogos.PalpitesSuperSete;
+ import br.gov.caixa.silce.dominio.jogos.TipoConcurso;
+ import br.gov.caixa.silce.dominio.servico.compra.MsgNuvemIntegracaoCompraConfirmacao;
+ import br.gov.caixa.silce.dominio.servico.compra.MsgNuvemIntegracaoCompraSolicitacao;
+@@ -446,30 +449,47 @@ public class ControlaIntegracaoCompraBean implements ControlaIntegracaoCompraLoc
+     }
+ 
+     private void preencherPalpites(Aposta<?> aposta, NuvemIntegracaoAposta apostaNuvem) {
++        String prognostico = apostaNuvem.prognostico;
++
+         if (aposta instanceof AbstractApostaNumerica) {
+             AbstractApostaNumerica apostaNumerica = (AbstractApostaNumerica) aposta;
+-            List<Integer> prognosticos = new ArrayList<Integer>();
+             // prognosticos = apostaNuvem.prognosticos // TODO: silce-compra-processamento
++            List<Integer> prognosticos = new PalpitesSequenciais(prognostico).getPrognosticos();
+             apostaNumerica.setPrognosticos(prognosticos);
+         }
+         else if (aposta instanceof ApostaSuperSete) {
+             ApostaSuperSete apostaSuperSete = (ApostaSuperSete) aposta;
+-            List<List<Integer>> prognosticos = new ArrayList<List<Integer>>();
+             // prognosticos = apostaNuvem.prognosticos // TODO: silce-compra-processamento
++            List<List<Integer>> prognosticos = new PalpitesSuperSete(prognostico).getPrognosticos();
+             apostaSuperSete.setPrognosticos(prognosticos);
++            
+         } else if (aposta instanceof ApostaLoteca) {
+             ApostaLoteca apostaLoteca = (ApostaLoteca) aposta;
+-            boolean[][] prognosticos = new boolean[][] {};
+             // prognosticos = apostaNuvem.prognosticos // TODO: silce-compra-processamento
++            boolean[][] prognosticos = new PalpitesLoteca(prognostico).getPrognosticosConvertidos();
+             apostaLoteca.setPrognosticos(prognosticos);
++
+         } else if (aposta instanceof ApostaLotogol) {
+             ApostaLotogol apostaLoteca = (ApostaLotogol) aposta;
+-            boolean[][] prognosticos = new boolean[][] {};
+             // prognosticos = apostaNuvem.prognosticos // TODO: silce-compra-processamento
++            boolean[][] prognosticos = new PalpitesLotogol(prognostico).getPrognosticosConvertidos();
+             apostaLoteca.setPrognosticos(prognosticos);
+         }
+     }
+ 
++    // private <T> List<T> resolverPrognosticos(String prognostico) {
++    //     String[] prognosticos = prognostico.split("\\s+");
++
++    //     List<T> ret = new ArrayList<T>();
++
++    //     for (String p : prognosticos) {
++    //         T castP = (T) p;
++    //         ret.add(castP);
++    //     }
++    //     return ret;
++    // }
++
++
+     private ApostaComprada instanciarApostaComprada(
+         NuvemIntegracaoApostaComprada acNuvem,
+         Aposta<?> apostaLegado
+-- 
+2.39.3 (Apple Git-146)
+
