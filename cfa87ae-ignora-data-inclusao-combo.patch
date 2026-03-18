@@ -1,0 +1,28 @@
+From cfa87aed885e50646bcf348abdb79e003e21e549 Mon Sep 17 00:00:00 2001
+From: cabutchei <luropa_paz@hotmail.com>
+Date: Wed, 18 Mar 2026 10:24:29 -0300
+Subject: [PATCH] Ignora data inclusao combo
+
+---
+ .../integracaocompra/ControlaIntegracaoCompraBean.java       | 5 ++++-
+ 1 file changed, 4 insertions(+), 1 deletion(-)
+
+diff --git a/silce-liberty-ejb/src/main/java/br/gov/caixa/silce/negocio/integracaocompra/ControlaIntegracaoCompraBean.java b/silce-liberty-ejb/src/main/java/br/gov/caixa/silce/negocio/integracaocompra/ControlaIntegracaoCompraBean.java
+index 9976a81..33ced9d 100644
+--- a/silce-liberty-ejb/src/main/java/br/gov/caixa/silce/negocio/integracaocompra/ControlaIntegracaoCompraBean.java
++++ b/silce-liberty-ejb/src/main/java/br/gov/caixa/silce/negocio/integracaocompra/ControlaIntegracaoCompraBean.java
+@@ -290,7 +290,10 @@ public class ControlaIntegracaoCompraBean implements ControlaIntegracaoCompraLoc
+         ComboAposta combo = new ComboAposta(comboNuvem.tipoCombo);
+         combo.setMes((long) getMesAtual());
+         combo.setParticao((long) getParticao(comboNuvem.idNuvem)); // TODO: conferir se essa geração de partição é aceitável
+-        combo.setDataInclusao(new Data(new Date()).toString()); // TODO: melhorar essa aberração. criar o campo na nuvem?
++        /*
++         o campo de data de inclusão de combos não existe na table LCETB046 e, até onde investiguei, não é setado no fluxo do carrinho. Me parece que sua função é como identificador transiente
++         */
++        // combo.setDataInclusao(new Data(new Date()).toString()); // TODO: melhorar essa aberração. criar o campo na nuvem?
+ 
+         Long idLegado = persistirComboAposta(combo);
+ 
+-- 
+2.39.3 (Apple Git-146)
+

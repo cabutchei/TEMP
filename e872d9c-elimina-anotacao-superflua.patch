@@ -1,0 +1,27 @@
+From e872d9c5e3e52010609d4e559ec4936395823abd Mon Sep 17 00:00:00 2001
+From: cabutchei <luropa_paz@hotmail.com>
+Date: Wed, 18 Mar 2026 10:05:19 -0300
+Subject: [PATCH] =?UTF-8?q?Elimina=20anota=C3=A7=C3=A3o=20sup=C3=A9rflua?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+---
+ .../negocio/integracaocompra/ControlaIntegracaoCompraBean.java   | 1 -
+ 1 file changed, 1 deletion(-)
+
+diff --git a/silce-liberty-ejb/src/main/java/br/gov/caixa/silce/negocio/integracaocompra/ControlaIntegracaoCompraBean.java b/silce-liberty-ejb/src/main/java/br/gov/caixa/silce/negocio/integracaocompra/ControlaIntegracaoCompraBean.java
+index 7e45cf3..9976a81 100644
+--- a/silce-liberty-ejb/src/main/java/br/gov/caixa/silce/negocio/integracaocompra/ControlaIntegracaoCompraBean.java
++++ b/silce-liberty-ejb/src/main/java/br/gov/caixa/silce/negocio/integracaocompra/ControlaIntegracaoCompraBean.java
+@@ -120,7 +120,6 @@ public class ControlaIntegracaoCompraBean implements ControlaIntegracaoCompraLoc
+         }
+     }
+ 
+-    @TransactionAttribute(TransactionAttributeType.REQUIRED)
+     private void tratarCriacao(MsgNuvemIntegracaoCompraSolicitacao solicitacao) throws Exception {
+         if (solicitacao.apostador == null) {
+             throw new IllegalStateException("Apostador vazio");
+-- 
+2.39.3 (Apple Git-146)
+

@@ -1,0 +1,32 @@
+From 878cf112d42301c1778012998e7ac14f1593c4ac Mon Sep 17 00:00:00 2001
+From: cabutchei <luropa_paz@hotmail.com>
+Date: Wed, 18 Mar 2026 10:04:49 -0300
+Subject: [PATCH] Tratamento apostador inexistente
+
+---
+ .../integracaocompra/ControlaIntegracaoCompraBean.java   | 9 ++++++++-
+ 1 file changed, 8 insertions(+), 1 deletion(-)
+
+diff --git a/silce-liberty-ejb/src/main/java/br/gov/caixa/silce/negocio/integracaocompra/ControlaIntegracaoCompraBean.java b/silce-liberty-ejb/src/main/java/br/gov/caixa/silce/negocio/integracaocompra/ControlaIntegracaoCompraBean.java
+index c8c4b51..7e45cf3 100644
+--- a/silce-liberty-ejb/src/main/java/br/gov/caixa/silce/negocio/integracaocompra/ControlaIntegracaoCompraBean.java
++++ b/silce-liberty-ejb/src/main/java/br/gov/caixa/silce/negocio/integracaocompra/ControlaIntegracaoCompraBean.java
+@@ -122,7 +122,14 @@ public class ControlaIntegracaoCompraBean implements ControlaIntegracaoCompraLoc
+ 
+     @TransactionAttribute(TransactionAttributeType.REQUIRED)
+     private void tratarCriacao(MsgNuvemIntegracaoCompraSolicitacao solicitacao) throws Exception {
+-        Apostador apostador = recuperarApostador(solicitacao.apostador); // TODO: tratar apostador inexistente
++        if (solicitacao.apostador == null) {
++            throw new IllegalStateException("Apostador vazio");
++        }
++        Apostador apostador = recuperarApostador(solicitacao.apostador);
++
++        if (apostador == null) {
++            throw new IllegalStateException("Não foi encontrado no legado o apostador com id " + solicitacao.apostador.idLegado);
++        }
+ 
+         Compra compraExistente = compraDAO.findByNsuData(solicitacao.compra.nsu, extrairData(solicitacao.compra.dataInicioCompra));
+ 
+-- 
+2.39.3 (Apple Git-146)
+

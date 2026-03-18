@@ -1,0 +1,88 @@
+From 2938a2d9bd090a182e2e48154cbc6b71ef3b031e Mon Sep 17 00:00:00 2001
+From: cabutchei <luropa_paz@hotmail.com>
+Date: Wed, 18 Mar 2026 11:41:29 -0300
+Subject: [PATCH] Preenche prognosticos
+
+---
+ .../ControlaIntegracaoCompraBean.java         | 45 ++++++++++++++++---
+ 1 file changed, 40 insertions(+), 5 deletions(-)
+
+diff --git a/silce-liberty-ejb/src/main/java/br/gov/caixa/silce/negocio/integracaocompra/ControlaIntegracaoCompraBean.java b/silce-liberty-ejb/src/main/java/br/gov/caixa/silce/negocio/integracaocompra/ControlaIntegracaoCompraBean.java
+index 33ced9d..a201740 100644
+--- a/silce-liberty-ejb/src/main/java/br/gov/caixa/silce/negocio/integracaocompra/ControlaIntegracaoCompraBean.java
++++ b/silce-liberty-ejb/src/main/java/br/gov/caixa/silce/negocio/integracaocompra/ControlaIntegracaoCompraBean.java
+@@ -1,14 +1,14 @@
+ package br.gov.caixa.silce.negocio.integracaocompra;
+ 
++import java.util.ArrayList;
+ import java.util.Calendar;
+ import java.util.Date;
+ import java.util.HashMap;
++import java.util.List;
+ import java.util.Map;
+ 
+ import javax.ejb.EJB;
+ import javax.ejb.Stateless;
+-import javax.ejb.TransactionAttribute;
+-import javax.ejb.TransactionAttributeType;
+ import javax.resource.spi.IllegalStateException;
+ 
+ import org.apache.logging.log4j.LogManager;
+@@ -19,6 +19,9 @@ import br.gov.caixa.silce.dominio.Subcanal;
+ import br.gov.caixa.silce.dominio.entidade.AbstractApostaNumerica;
+ import br.gov.caixa.silce.dominio.entidade.Aposta;
+ import br.gov.caixa.silce.dominio.entidade.ApostaComprada;
++import br.gov.caixa.silce.dominio.entidade.ApostaLoteca;
++import br.gov.caixa.silce.dominio.entidade.ApostaLotogol;
++import br.gov.caixa.silce.dominio.entidade.ApostaSuperSete;
+ import br.gov.caixa.silce.dominio.entidade.Apostador;
+ import br.gov.caixa.silce.dominio.entidade.ComboAposta;
+ import br.gov.caixa.silce.dominio.entidade.Compra;
+@@ -428,9 +431,41 @@ public class ControlaIntegracaoCompraBean implements ControlaIntegracaoCompraLoc
+ 
+         aposta.setIndicadorBolao(apostaNuvem.reservaCotaBolao != null ? Boolean.TRUE : Boolean.FALSE);
+ 
+-        // Associações
+-        aposta.setApostaOriginalLotomania(null); // TODO: APOSTA ESPELHO - APONTAR PARA A OUTRA APOSTA, SE APLICÁVEL
+-        aposta.setComboAposta(null); // TODO: APONTAR PARA O COMBO, SE APLICÁVEL
++        preencherPalpites(aposta, apostaNuvem);
++
++        /*
++         o campo apostaOriginalEspelho não é referenciado em lugar algum do código atualmente. Na tabela de TQS, apenas 11 apostas possuem a coluna correspondente
++         preenchida. Creio se tratar de um campo obsoleto.
++         */
++        // if (aposta instanceof ApostaLotomania) {
++        //     ApostaLotomania apostaLotomania = (ApostaLotomania) aposta;
++        //     aposta.setApostaOriginalLotomania(null);
++        // }
++    }
++
++    private void preencherPalpites(Aposta<?> aposta, NuvemIntegracaoAposta apostaNuvem) {
++        if (aposta instanceof AbstractApostaNumerica) {
++            AbstractApostaNumerica apostaNumerica = (AbstractApostaNumerica) aposta;
++            List<Integer> prognosticos = new ArrayList<Integer>();
++            // prognosticos = apostaNuvem.prognosticos // TODO: silce-compra-processamento
++            apostaNumerica.setPrognosticos(prognosticos);
++        }
++        else if (aposta instanceof ApostaSuperSete) {
++            ApostaSuperSete apostaSuperSete = (ApostaSuperSete) aposta;
++            List<List<Integer>> prognosticos = new ArrayList<List<Integer>>();
++            // prognosticos = apostaNuvem.prognosticos // TODO: silce-compra-processamento
++            apostaSuperSete.setPrognosticos(prognosticos);
++        } else if (aposta instanceof ApostaLoteca) {
++            ApostaLoteca apostaLoteca = (ApostaLoteca) aposta;
++            boolean[][] prognosticos = new boolean[][] {};
++            // prognosticos = apostaNuvem.prognosticos // TODO: silce-compra-processamento
++            apostaLoteca.setPrognosticos(prognosticos);
++        } else if (aposta instanceof ApostaLotogol) {
++            ApostaLotogol apostaLoteca = (ApostaLotogol) aposta;
++            boolean[][] prognosticos = new boolean[][] {};
++            // prognosticos = apostaNuvem.prognosticos // TODO: silce-compra-processamento
++            apostaLoteca.setPrognosticos(prognosticos);
++        }
+     }
+ 
+     private ApostaComprada instanciarApostaComprada(
+-- 
+2.39.3 (Apple Git-146)
+
