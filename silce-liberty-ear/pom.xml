@@ -1,0 +1,65 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>br.gov.caixa.silce</groupId>
+    <artifactId>silce-liberty-ear-parent</artifactId>
+    <version>1.0-SNAPSHOT</version>
+    <relativePath>../pom.xml</relativePath>
+  </parent>
+
+  <artifactId>silce-liberty-ear</artifactId>
+  <packaging>ear</packaging>
+
+  <dependencies>
+    <dependency>
+      <groupId>br.gov.caixa.silce</groupId>
+      <artifactId>silce-liberty-ejb</artifactId>
+      <version>${project.version}</version>
+      <type>ejb</type>
+    </dependency>
+    <dependency>
+      <groupId>br.gov.caixa.silce</groupId>
+      <artifactId>silce-liberty-web</artifactId>
+      <version>${project.version}</version>
+      <type>war</type>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <plugins>
+      <plugin>
+        <artifactId>maven-ear-plugin</artifactId>
+        <version>${maven.ear.plugin.version}</version>
+        <configuration>
+          <version>7</version>
+          <outputFileNameMapping>@{artifactId}@-@{version}@.@{extension}@</outputFileNameMapping>
+          <defaultLibBundleDir>lib</defaultLibBundleDir>
+          <modules>
+            <ejbModule>
+              <groupId>br.gov.caixa.silce</groupId>
+              <artifactId>silce-liberty-ejb</artifactId>
+            </ejbModule>
+            <webModule>
+              <groupId>br.gov.caixa.silce</groupId>
+              <artifactId>silce-liberty-web</artifactId>
+              <contextRoot>silce-liberty-web</contextRoot>
+            </webModule>
+          </modules>
+        </configuration>
+      </plugin>
+
+      <plugin>
+        <groupId>io.openliberty.tools</groupId>
+        <artifactId>liberty-maven-plugin</artifactId>
+        <version>${liberty.maven.plugin.version}</version>
+        <configuration>
+          <serverName>defaultServer</serverName>
+          <include>runnable</include>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
+</project>
