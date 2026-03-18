@@ -1,0 +1,24 @@
+From 8730d4ec7f28b7c796b5413705e7f75b5e5e35a2 Mon Sep 17 00:00:00 2001
+From: cabutchei <luropa_paz@hotmail.com>
+Date: Wed, 18 Mar 2026 11:48:42 -0300
+Subject: [PATCH] seta aposta comprada
+
+---
+ .../negocio/integracaocompra/ControlaIntegracaoCompraBean.java   | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/silce-liberty-ejb/src/main/java/br/gov/caixa/silce/negocio/integracaocompra/ControlaIntegracaoCompraBean.java b/silce-liberty-ejb/src/main/java/br/gov/caixa/silce/negocio/integracaocompra/ControlaIntegracaoCompraBean.java
+index c3b4f31..65009b8 100644
+--- a/silce-liberty-ejb/src/main/java/br/gov/caixa/silce/negocio/integracaocompra/ControlaIntegracaoCompraBean.java
++++ b/silce-liberty-ejb/src/main/java/br/gov/caixa/silce/negocio/integracaocompra/ControlaIntegracaoCompraBean.java
+@@ -280,6 +280,7 @@ public class ControlaIntegracaoCompraBean implements ControlaIntegracaoCompraLoc
+         }
+ 
+         ApostaComprada apostaComprada = instanciarApostaComprada(apostaNuvem.comprada, aposta);
++        aposta.setApostaComprada(apostaComprada);
+         persistirApostaComprada(apostaComprada);
+ 
+         LOG.info("Aposta {0}/{1} importada para a compra legado {2}. Id aposta-comprada: {3}", apostaNuvem.idNuvem, aposta.getId(), compra.getId(), apostaComprada.getId());
+-- 
+2.39.3 (Apple Git-146)
+

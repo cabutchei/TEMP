@@ -1,0 +1,37 @@
+From 015de6165540c21426b21aef942633fe14e5463a Mon Sep 17 00:00:00 2001
+From: cabutchei <luropa_paz@hotmail.com>
+Date: Wed, 18 Mar 2026 11:46:27 -0300
+Subject: [PATCH] seta nsb
+
+---
+ .../integracaocompra/ControlaIntegracaoCompraBean.java     | 7 +++++--
+ 1 file changed, 5 insertions(+), 2 deletions(-)
+
+diff --git a/silce-liberty-ejb/src/main/java/br/gov/caixa/silce/negocio/integracaocompra/ControlaIntegracaoCompraBean.java b/silce-liberty-ejb/src/main/java/br/gov/caixa/silce/negocio/integracaocompra/ControlaIntegracaoCompraBean.java
+index a201740..c3b4f31 100644
+--- a/silce-liberty-ejb/src/main/java/br/gov/caixa/silce/negocio/integracaocompra/ControlaIntegracaoCompraBean.java
++++ b/silce-liberty-ejb/src/main/java/br/gov/caixa/silce/negocio/integracaocompra/ControlaIntegracaoCompraBean.java
+@@ -15,6 +15,7 @@ import org.apache.logging.log4j.LogManager;
+ import org.apache.logging.log4j.Logger;
+ import org.apache.logging.log4j.message.MessageFormatMessageFactory;
+ 
++import br.gov.caixa.silce.dominio.NSB;
+ import br.gov.caixa.silce.dominio.Subcanal;
+ import br.gov.caixa.silce.dominio.entidade.AbstractApostaNumerica;
+ import br.gov.caixa.silce.dominio.entidade.Aposta;
+@@ -489,8 +490,10 @@ public class ControlaIntegracaoCompraBean implements ControlaIntegracaoCompraLoc
+         apostaComprada.setConcursoInicial(acNuvem.concursoInicial);
+         apostaComprada.setNsuTransacao(acNuvem.nsu);
+         apostaComprada.setNsuTransacaoDevolucao(acNuvem.nsuDevolucao);
+-        apostaComprada.setNsb(null); // TODO: puxar de comprada.nsb
+-        apostaComprada.setPremio(null); // TODO
++        // apostaComprada
++        NSB nsb = new NSB(acNuvem.nsb);
++        apostaComprada.setNsb(nsb);
++        apostaComprada.setPremio(null); // TODO: silce-compra-processamento
+ 
+         apostaComprada.setSubcanalPagamento(Subcanal.getByCodigo(acNuvem.subcanal));
+         apostaComprada.setApostaTroca(acNuvem.bilheteTroca);
+-- 
+2.39.3 (Apple Git-146)
+
