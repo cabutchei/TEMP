@@ -7,10 +7,10 @@ Subject: [PATCH] Ignora data inclusao combo
  .../integracaocompra/ControlaIntegracaoCompraBean.java       | 5 ++++-
  1 file changed, 4 insertions(+), 1 deletion(-)
 
-diff --git a/silce-liberty-ejb/src/main/java/br/gov/caixa/silce/negocio/integracaocompra/ControlaIntegracaoCompraBean.java b/silce-liberty-ejb/src/main/java/br/gov/caixa/silce/negocio/integracaocompra/ControlaIntegracaoCompraBean.java
+diff --git a/silce/silce-negocio/ejbModule/br/gov/caixa/silce/negocio/integracaocompra/ControlaIntegracaoCompraBean.java b/silce/silce-negocio/ejbModule/br/gov/caixa/silce/negocio/integracaocompra/ControlaIntegracaoCompraBean.java
 index 9976a81..33ced9d 100644
---- a/silce-liberty-ejb/src/main/java/br/gov/caixa/silce/negocio/integracaocompra/ControlaIntegracaoCompraBean.java
-+++ b/silce-liberty-ejb/src/main/java/br/gov/caixa/silce/negocio/integracaocompra/ControlaIntegracaoCompraBean.java
+--- a/silce/silce-negocio/ejbModule/br/gov/caixa/silce/negocio/integracaocompra/ControlaIntegracaoCompraBean.java
++++ b/silce/silce-negocio/ejbModule/br/gov/caixa/silce/negocio/integracaocompra/ControlaIntegracaoCompraBean.java
 @@ -290,7 +290,10 @@ public class ControlaIntegracaoCompraBean implements ControlaIntegracaoCompraLoc
          ComboAposta combo = new ComboAposta(comboNuvem.tipoCombo);
          combo.setMes((long) getMesAtual());

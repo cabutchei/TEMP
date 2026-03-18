@@ -12,10 +12,10 @@ Content-Transfer-Encoding: 8bit
  .../ControlaIntegracaoCompraBean.java         | 24 +++++++++++++------
  2 files changed, 23 insertions(+), 10 deletions(-)
 
-diff --git a/silce-liberty-ejb/src/main/java/br/gov/caixa/silce/dominio/servico/compra/MsgNuvemIntegracaoCompraConfirmacao.java b/silce-liberty-ejb/src/main/java/br/gov/caixa/silce/dominio/servico/compra/MsgNuvemIntegracaoCompraConfirmacao.java
+diff --git a/silce/silce-dominio/src/br/gov/caixa/silce/dominio/servico/compra/MsgNuvemIntegracaoCompraConfirmacao.java b/silce/silce-dominio/src/br/gov/caixa/silce/dominio/servico/compra/MsgNuvemIntegracaoCompraConfirmacao.java
 index 01f8ec1..0fdc43f 100644
---- a/silce-liberty-ejb/src/main/java/br/gov/caixa/silce/dominio/servico/compra/MsgNuvemIntegracaoCompraConfirmacao.java
-+++ b/silce-liberty-ejb/src/main/java/br/gov/caixa/silce/dominio/servico/compra/MsgNuvemIntegracaoCompraConfirmacao.java
+--- a/silce/silce-dominio/src/br/gov/caixa/silce/dominio/servico/compra/MsgNuvemIntegracaoCompraConfirmacao.java
++++ b/silce/silce-dominio/src/br/gov/caixa/silce/dominio/servico/compra/MsgNuvemIntegracaoCompraConfirmacao.java
 @@ -23,20 +23,23 @@ public class MsgNuvemIntegracaoCompraConfirmacao implements EntradaBroker<MsgNuv
  
      public Map<Long, Long> idsApostasNuvemLegado = new HashMap<Long, Long>();
@@ -43,10 +43,10 @@ index 01f8ec1..0fdc43f 100644
  
          this.ignorada = ignorada;
      }
-diff --git a/silce-liberty-ejb/src/main/java/br/gov/caixa/silce/negocio/integracaocompra/ControlaIntegracaoCompraBean.java b/silce-liberty-ejb/src/main/java/br/gov/caixa/silce/negocio/integracaocompra/ControlaIntegracaoCompraBean.java
+diff --git a/silce/silce-negocio/ejbModule/br/gov/caixa/silce/negocio/integracaocompra/ControlaIntegracaoCompraBean.java b/silce/silce-negocio/ejbModule/br/gov/caixa/silce/negocio/integracaocompra/ControlaIntegracaoCompraBean.java
 index 01682a9..c8c4b51 100644
---- a/silce-liberty-ejb/src/main/java/br/gov/caixa/silce/negocio/integracaocompra/ControlaIntegracaoCompraBean.java
-+++ b/silce-liberty-ejb/src/main/java/br/gov/caixa/silce/negocio/integracaocompra/ControlaIntegracaoCompraBean.java
+--- a/silce/silce-negocio/ejbModule/br/gov/caixa/silce/negocio/integracaocompra/ControlaIntegracaoCompraBean.java
++++ b/silce/silce-negocio/ejbModule/br/gov/caixa/silce/negocio/integracaocompra/ControlaIntegracaoCompraBean.java
 @@ -150,9 +150,19 @@ public class ControlaIntegracaoCompraBean implements ControlaIntegracaoCompraLoc
  
          Compra compra = importarCompraNova(solicitacao.compra, apostador);

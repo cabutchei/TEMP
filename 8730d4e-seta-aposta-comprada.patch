@@ -7,10 +7,10 @@ Subject: [PATCH] seta aposta comprada
  .../negocio/integracaocompra/ControlaIntegracaoCompraBean.java   | 1 +
  1 file changed, 1 insertion(+)
 
-diff --git a/silce-liberty-ejb/src/main/java/br/gov/caixa/silce/negocio/integracaocompra/ControlaIntegracaoCompraBean.java b/silce-liberty-ejb/src/main/java/br/gov/caixa/silce/negocio/integracaocompra/ControlaIntegracaoCompraBean.java
+diff --git a/silce/silce-negocio/ejbModule/br/gov/caixa/silce/negocio/integracaocompra/ControlaIntegracaoCompraBean.java b/silce/silce-negocio/ejbModule/br/gov/caixa/silce/negocio/integracaocompra/ControlaIntegracaoCompraBean.java
 index c3b4f31..65009b8 100644
---- a/silce-liberty-ejb/src/main/java/br/gov/caixa/silce/negocio/integracaocompra/ControlaIntegracaoCompraBean.java
-+++ b/silce-liberty-ejb/src/main/java/br/gov/caixa/silce/negocio/integracaocompra/ControlaIntegracaoCompraBean.java
+--- a/silce/silce-negocio/ejbModule/br/gov/caixa/silce/negocio/integracaocompra/ControlaIntegracaoCompraBean.java
++++ b/silce/silce-negocio/ejbModule/br/gov/caixa/silce/negocio/integracaocompra/ControlaIntegracaoCompraBean.java
 @@ -280,6 +280,7 @@ public class ControlaIntegracaoCompraBean implements ControlaIntegracaoCompraLoc
          }
  

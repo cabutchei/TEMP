@@ -10,10 +10,10 @@ Content-Transfer-Encoding: 8bit
  .../negocio/integracaocompra/ControlaIntegracaoCompraBean.java   | 1 -
  1 file changed, 1 deletion(-)
 
-diff --git a/silce-liberty-ejb/src/main/java/br/gov/caixa/silce/negocio/integracaocompra/ControlaIntegracaoCompraBean.java b/silce-liberty-ejb/src/main/java/br/gov/caixa/silce/negocio/integracaocompra/ControlaIntegracaoCompraBean.java
+diff --git a/silce/silce-negocio/ejbModule/br/gov/caixa/silce/negocio/integracaocompra/ControlaIntegracaoCompraBean.java b/silce/silce-negocio/ejbModule/br/gov/caixa/silce/negocio/integracaocompra/ControlaIntegracaoCompraBean.java
 index 7e45cf3..9976a81 100644
---- a/silce-liberty-ejb/src/main/java/br/gov/caixa/silce/negocio/integracaocompra/ControlaIntegracaoCompraBean.java
-+++ b/silce-liberty-ejb/src/main/java/br/gov/caixa/silce/negocio/integracaocompra/ControlaIntegracaoCompraBean.java
+--- a/silce/silce-negocio/ejbModule/br/gov/caixa/silce/negocio/integracaocompra/ControlaIntegracaoCompraBean.java
++++ b/silce/silce-negocio/ejbModule/br/gov/caixa/silce/negocio/integracaocompra/ControlaIntegracaoCompraBean.java
 @@ -120,7 +120,6 @@ public class ControlaIntegracaoCompraBean implements ControlaIntegracaoCompraLoc
          }
      }
