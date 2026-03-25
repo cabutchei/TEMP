@@ -7,19 +7,25 @@ import br.gov.caixa.silce.dominio.Subcanal;
 import br.gov.caixa.silce.dominio.servico.compra.NuvemIntegracaoApostaComprada;
 import br.gov.caixa.util.Decimal;
 
-public class ApostaCompradaMapper {
+public class ApostaCompradaMapper extends Mapper<NuvemIntegracaoApostaComprada, ApostaComprada>{
 
+    @Override
     public ApostaComprada map(NuvemIntegracaoApostaComprada apostaCompradaNuvem) {
         ApostaComprada apostaComprada = new ApostaComprada();
-        apostaComprada.setDataUltimaSituacao( IntegracaoUtil.extrairData(apostaCompradaNuvem.tsUltimaSituacao));
+        return map(apostaCompradaNuvem, apostaComprada);
+    }
+
+    @Override
+    public ApostaComprada map(NuvemIntegracaoApostaComprada apostaCompradaNuvem, ApostaComprada apostaComprada) {
+        apostaComprada.setDataUltimaSituacao(IntegracaoUtil.extrairData(apostaCompradaNuvem.tsUltimaSituacao));
         apostaComprada.setConcursoInicial(apostaCompradaNuvem.concursoInicial);
         apostaComprada.setNsuTransacao(apostaCompradaNuvem.nsu);
         apostaComprada.setNsuTransacaoDevolucao(apostaCompradaNuvem.nsuDevolucao);
         apostaComprada.setNsb(null); // TODO puxar de comprada.nsb
         apostaComprada.setPremio(null); // TODO
-        apostaComprada.setSubcanalPagamento( Subcanal.getByCodigo(apostaCompradaNuvem.subcanal));
+        apostaComprada.setSubcanalPagamento(Subcanal.getByCodigo(apostaCompradaNuvem.subcanal));
         apostaComprada.setApostaTroca(apostaCompradaNuvem.bilheteTroca);
-        apostaComprada.setValorComissao( new Decimal(apostaCompradaNuvem.valorComissao));
+        apostaComprada.setValorComissao(new Decimal(apostaCompradaNuvem.valorComissao));
         apostaComprada.setIndicadorBloqueioDevolucao( apostaCompradaNuvem.bloqueioDevolucao);
 
         apostaComprada.setDataEfetivacaoSISPL(IntegracaoUtil.extrairData(apostaCompradaNuvem.tsEfetivacaoSispl));

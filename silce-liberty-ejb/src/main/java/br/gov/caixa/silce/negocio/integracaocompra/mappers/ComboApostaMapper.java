@@ -4,10 +4,15 @@ import br.gov.caixa.silce.dominio.entidade.ComboAposta;
 import br.gov.caixa.silce.dominio.servico.compra.NuvemIntegracaoCombo;
 import br.gov.caixa.silce.negocio.integracaocompra.IntegracaoUtil;
 
-public class ComboApostaMapper {
+public class ComboApostaMapper extends Mapper<NuvemIntegracaoCombo, ComboAposta> {
 
     public ComboAposta map(NuvemIntegracaoCombo comboApostaNuvem) {
         ComboAposta combo = new ComboAposta();
+        return map(comboApostaNuvem, combo);
+    }
+
+    @Override
+    public ComboAposta map(NuvemIntegracaoCombo comboApostaNuvem, ComboAposta combo) {
         combo.setMes((long) IntegracaoUtil.getMesAtual());
         combo.setParticao( (long) IntegracaoUtil.getParticao(comboApostaNuvem.idNuvem)); // TODO conferir se essa geração de partição é aceitável
         // obs: o campo de data é transiente e, até onde investiguei, nem sequer é preenchido no fluxo atual do carrinho nuvem

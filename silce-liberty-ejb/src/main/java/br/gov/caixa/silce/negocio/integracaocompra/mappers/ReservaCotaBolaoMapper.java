@@ -5,14 +5,21 @@ import br.gov.caixa.silce.dominio.servico.compra.NuvemIntegracaoReserva;
 import br.gov.caixa.silce.negocio.integracaocompra.IntegracaoUtil;
 import br.gov.caixa.util.Decimal;
 
-public class ReservaCotaBolaoMapper {
+public class ReservaCotaBolaoMapper extends Mapper<NuvemIntegracaoReserva, ReservaCotaBolao>{
 
+    @Override
     public ReservaCotaBolao map(NuvemIntegracaoReserva reservaCotaBolaoNuvem) {
         ReservaCotaBolao reserva = new ReservaCotaBolao();
+        return map(reservaCotaBolaoNuvem, reserva);
+    }
+
+    @Override
+    public ReservaCotaBolao map(NuvemIntegracaoReserva reservaCotaBolaoNuvem, ReservaCotaBolao reserva) {
         reserva.setCodBolao(reservaCotaBolaoNuvem.codBolao);
         reserva.setQtdCotaTotal(reservaCotaBolaoNuvem.qtdCotaTotal);
         reserva.setDataRegistroBolao(IntegracaoUtil.extrairData(reservaCotaBolaoNuvem.dataRegistroBolao));
         reserva.setHoraRegistroBolao(IntegracaoUtil.extrairHora(reservaCotaBolaoNuvem.dataRegistroBolao));
+        reserva.setAno(IntegracaoUtil.getAnoAtual());
         reserva.setNumeroTerminalLoterico(reservaCotaBolaoNuvem.numeroTerminalLoterico);
 
 

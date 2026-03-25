@@ -12,88 +12,52 @@ import br.gov.caixa.silce.dominio.entidade.ComboAposta;
 import br.gov.caixa.silce.dominio.entidade.Compra;
 import br.gov.caixa.silce.dominio.entidade.ReservaCotaBolao;
 import br.gov.caixa.silce.dominio.servico.compra.NuvemIntegracaoAposta;
-import br.gov.caixa.silce.negocio.aposta.dao.ApostaDAO;
-import br.gov.caixa.silce.negocio.aposta.dao.ComboApostaDAO;
-import br.gov.caixa.silce.negocio.aposta.dao.CompraDAO;
-import br.gov.caixa.silce.negocio.aposta.dao.ReservaCotaBolaoDAO;
+import br.gov.caixa.silce.negocio.aposta.dao.ApostaDAOLocal;
+import br.gov.caixa.silce.negocio.aposta.dao.ComboApostaDAOLocal;
+import br.gov.caixa.silce.negocio.aposta.dao.CompraDAOLocal;
+import br.gov.caixa.silce.negocio.aposta.dao.ReservaCotaBolaoDAOLocal;
+import br.gov.caixa.silce.negocio.integracaocompra.mappers.ApostaMapper;
 
-public class ApostaSynchronizer extends IntegracaoSynchronizer<NuvemIntegracaoAposta, Aposta<?>, Long> {
+public class ApostaSynchronizer extends AbstractIdNuvemLegadoSynchronizer<NuvemIntegracaoAposta, Aposta<?>> {
 
-    private static final Logger LOG =
-        LogManager.getLogger(ApostaSynchronizer.class, new MessageFormatMessageFactory());
+    private static final Logger LOG = LogManager.getLogger(ApostaSynchronizer.class, new MessageFormatMessageFactory());
 
-    private ComboApostaDAO comboApostaDAO;
-    private CompraDAO compraDAO;
-    private ApostaDAO apostaDAO;
-    private ReservaCotaBolaoDAO reservaCotaBolaoDAO;
+    private ComboApostaDAOLocal comboApostaDAO;
+    private CompraDAOLocal compraDAO;
+    private ApostaDAOLocal apostaDAO;
+    private ReservaCotaBolaoDAOLocal reservaCotaBolaoDAO;
 
-    public ApostaSynchronizer(SyncContext context) {
-        super(context);
-        try {
-            this.comboApostaDAO = getDao(ComboApostaDAO.class);
-            this.compraDAO = getDao(CompraDAO.class);
-            this.apostaDAO = getDao(ApostaDAO.class);
-            this.reservaCotaBolaoDAO = getDao(ReservaCotaBolaoDAO.class);
-        } catch (NamingException e) {
-            logInitError(e);
-        }
-    }
-
-    @Override
-    protected Aposta<?> prepareUpdate(NuvemIntegracaoAposta apostaNuvem) {
-        Aposta<?> entity = dao.findById(apostaNuvem.idLegado);
-        mapper.map(apostaNuvem, entity);
-        return entity;
+    public ApostaSynchronizer(SyncContext.EntityCache cache) throws NamingException {
+        // super(cache);
+        this.cache = cache;
+        this.comboApostaDAO = getDao(ComboApostaDAOLocal.class);
+        this.compraDAO = getDao(CompraDAOLocal.class);
+        this.apostaDAO = getDao(ApostaDAOLocal.class);
+        this.reservaCotaBolaoDAO = getDao(ReservaCotaBolaoDAOLocal.class);
+        this.dao = apostaDAO;
+        this.mapper = new ApostaMapper();
     }
 
     @Override
     protected Aposta<?> create(NuvemIntegracaoAposta apostaNuvem) {
-
-        Aposta<?> aposta =
-            this.context.getCache().find(apostaNuvem.idNuvem, Aposta.class);
-
-        resolveRelations(apostaNuvem, aposta);
-
-        if (aposta instanceof AbstractApostaNumerica) {
-            AbstractApostaNumerica apostaNumerica = (AbstractApostaNumerica) aposta;
-            apostaNumerica.setQuantidadeTeimosinhas(apostaNuvem.qtdTeimosinhas);
-        }
-
-        aposta.setApostaOriginalLotomania(null);
-        aposta.setComboAposta(null);
-
+        Aposta<?> aposta = getCache().find(apostaNuvem.idNuvem, Aposta.class);
+        resolve(apostaNuvem, aposta);
         apostaDAO.insert(aposta);
-
         return aposta;
     }
 
     @Override
     protected Aposta<?> update(NuvemIntegracaoAposta apostaNuvem) {
-
         Long idLegadoAposta = apostaNuvem.idLegado;
-
         if (idLegadoAposta == null) {
             throw new IllegalStateException("id legado da aposta é null");
         }
-
-        Aposta<?> aposta =
-            this.context.getCache().find(apostaNuvem.idNuvem, Aposta.class);
-
+        Aposta<?> aposta = getCache().find(apostaNuvem.idNuvem, Aposta.class);
         if (aposta == null) {
             throw new IllegalStateException("Nenhuma aposta encontrada para o id " + idLegadoAposta);
         }
-
-        if (apostaNuvem.reservaCotaBolao != null) {
-            ReservaCotaBolao reserva =
-                this.context.getCache().find(
-                    apostaNuvem.reservaCotaBolao.idNuvem,
-                    ReservaCotaBolao.class);
-
-            aposta.setReservaCotaBolao(reserva);
-        }
-
+        resolve(apostaNuvem, aposta);
         Aposta<?> x = apostaDAO.update(aposta);
-
         if (x != aposta) {
             throw new IllegalStateException("entidade aposta retornada não é a mesma do cache");
         }
@@ -102,72 +66,53 @@ public class ApostaSynchronizer extends IntegracaoSynchronizer<NuvemIntegracaoAp
     }
 
     @Override
-    protected void resolveRelations(NuvemIntegracaoAposta apostaNuvem, Aposta<?> aposta) {
+    protected void resolve(NuvemIntegracaoAposta apostaNuvem, Aposta<?> aposta) {
         resolveCompra(apostaNuvem, aposta);
         resolveCombo(apostaNuvem, aposta);
-        resolveReservaCotaBolao(apostaNuvem, aposta);
+        if (apostaNuvem.reservaCotaBolao != null) {
+            resolveReservaCotaBolao(apostaNuvem, aposta);
+        }
 
         Compra compra = aposta.getCompra();
         aposta.setParticao(compra.getParticao());
         aposta.setMes(compra.getMes());
+
+        if (aposta instanceof AbstractApostaNumerica) {
+            AbstractApostaNumerica apostaNumerica = (AbstractApostaNumerica) aposta;
+            apostaNumerica.setQuantidadeTeimosinhas(apostaNuvem.qtdTeimosinhas);
+        }
+
+        aposta.setApostaOriginalLotomania(null);
+        aposta.setComboAposta(null);
     }
 
     private void resolveCompra(NuvemIntegracaoAposta apostaNuvem, Aposta<?> aposta) {
-
         if (apostaNuvem.compra == null) {
             throw new IllegalStateException("Não há compra associada a essa aposta");
         }
-
-        Long idCompra = apostaNuvem.compra.idLegado;
-
-        if (idCompra == null) {
-            throw new IllegalStateException("Nenhum id legado associado à compra");
-        }
-
         Long idCompraNuvem = apostaNuvem.compra.getIdNuvem();
-
-        Compra compra = this.context.getCache().find(idCompraNuvem, Compra.class);
-
+        Compra compra = getCache().find(idCompraNuvem, Compra.class);
         if (compra == null) {
             throw new IllegalStateException("Nenhuma compra encontrada no cache para o id " + idCompraNuvem);
         }
-
         aposta.setCompra(compra);
     }
 
     private void resolveCombo(NuvemIntegracaoAposta apostaNuvem, Aposta<?> aposta) {
-
         if (apostaNuvem.idNuvemCombo == null) return;
-
-        ComboAposta combo =
-            this.context.getCache().find(apostaNuvem.idNuvemCombo, ComboAposta.class);
-
+        ComboAposta combo = getCache().find(apostaNuvem.idNuvemCombo, ComboAposta.class);
         if (combo == null) {
             throw new IllegalStateException(
                 "Nenhum combo encontrado no cache para o id " + apostaNuvem.idNuvemCombo);
         }
-
         aposta.setComboAposta(combo);
     }
 
     private void resolveReservaCotaBolao(NuvemIntegracaoAposta apostaNuvem, Aposta<?> aposta) {
-
-        if (apostaNuvem.reservaCotaBolao == null) {
-            aposta.setReservaCotaBolao(null);
-            return;
-        }
-
-        ReservaCotaBolao reserva =
-            this.context.getCache().find(
-                apostaNuvem.reservaCotaBolao.idNuvem,
-                ReservaCotaBolao.class);
-
+        ReservaCotaBolao reserva = getCache().find(apostaNuvem.reservaCotaBolao.idNuvem, ReservaCotaBolao.class);
         if (reserva == null) {
-            throw new IllegalStateException(
-                "Nenhuma reserva de cota bolao encontrada no cache para o id "
-                    + apostaNuvem.reservaCotaBolao.idNuvem);
+            throw new IllegalStateException("Nenhuma reserva de cota bolao encontrada no cache para o id " + apostaNuvem.reservaCotaBolao.idNuvem);
         }
-
         aposta.setReservaCotaBolao(reserva);
     }
 }

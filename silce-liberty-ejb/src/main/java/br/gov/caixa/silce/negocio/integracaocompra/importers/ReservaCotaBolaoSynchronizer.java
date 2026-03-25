@@ -10,45 +10,40 @@ import br.gov.caixa.silce.dominio.entidade.Aposta;
 import br.gov.caixa.silce.dominio.entidade.Loterica;
 import br.gov.caixa.silce.dominio.entidade.ReservaCotaBolao;
 import br.gov.caixa.silce.dominio.entidade.ReservaCotaBolaoPK;
+import br.gov.caixa.silce.dominio.entidade.SituacaoReservaCotaBolao;
 import br.gov.caixa.silce.dominio.servico.compra.NuvemIntegracaoLoterica;
 import br.gov.caixa.silce.dominio.servico.compra.NuvemIntegracaoReserva;
-import br.gov.caixa.silce.negocio.aposta.dao.ApostaDAO;
-import br.gov.caixa.silce.negocio.aposta.dao.ReservaCotaBolaoDAO;
-import br.gov.caixa.silce.negocio.aposta.dao.SituacaoReservaCotaBolaoDAO;
-import br.gov.caixa.silce.negocio.apostador.dao.LotericaDAO;
+import br.gov.caixa.silce.negocio.aposta.dao.ApostaDAOLocal;
+import br.gov.caixa.silce.negocio.aposta.dao.ReservaCotaBolaoDAOLocal;
+import br.gov.caixa.silce.negocio.aposta.dao.SituacaoReservaCotaBolaoDAOLocal;
+import br.gov.caixa.silce.negocio.apostador.dao.LotericaDAOLocal;
 import br.gov.caixa.silce.negocio.integracaocompra.IntegracaoUtil;
+import br.gov.caixa.silce.negocio.integracaocompra.mappers.ReservaCotaBolaoMapper;
 
 
-public class ReservaCotaBolaoSynchronizer
-        extends IntegracaoSynchronizer<NuvemIntegracaoReserva, ReservaCotaBolao, ReservaCotaBolaoPK> {
+public class ReservaCotaBolaoSynchronizer extends AbstractIdNuvemSynchronizer<NuvemIntegracaoReserva, ReservaCotaBolao, ReservaCotaBolaoPK> {
 
     private static final Logger LOG = LogManager.getLogger(ReservaCotaBolaoSynchronizer.class, new MessageFormatMessageFactory());
 
-    ReservaCotaBolaoDAO reservaCotaBolaoDAO;
-    SituacaoReservaCotaBolaoDAO situacaoReservaCotaBolaoDAO;
-    ApostaDAO apostaDAO;
-    LotericaDAO lotericaDAO;
+    SituacaoReservaCotaBolaoDAOLocal situacaoReservaCotaBolaoDAO;
+    ApostaDAOLocal apostaDAO;
+    LotericaDAOLocal lotericaDAO;
 
-    public ReservaCotaBolaoSynchronizer(SyncContext context) {
-        super(context);
-        try {
-            reservaCotaBolaoDAO = getDao(ReservaCotaBolaoDAO.class);
-            apostaDAO = getDao(ApostaDAO.class);
-            situacaoReservaCotaBolaoDAO = getDao(SituacaoReservaCotaBolaoDAO.class);
-            lotericaDAO = getDao(LotericaDAO.class);
-        } catch (NamingException e) {
-            logInitError(e);
-        }
+    public ReservaCotaBolaoSynchronizer(SyncContext.EntityCache cache) throws NamingException {
+        apostaDAO = getDao(ApostaDAOLocal.class);
+        situacaoReservaCotaBolaoDAO = getDao(SituacaoReservaCotaBolaoDAOLocal.class);
+        lotericaDAO = getDao(LotericaDAOLocal.class);
+        this.dao = getDao(ReservaCotaBolaoDAOLocal.class);
+        this.cache = cache;
+        this.mapper = new ReservaCotaBolaoMapper();
     }
 
     @Override
-    protected ReservaCotaBolao prepareUpdate(NuvemIntegracaoReserva reservaNuvem) {
-        // ReservaCotaBolaoPK id = new ReservaCotaBolaoPK(reservaNuvem.)
-        Long idLegadoAposta = reservaNuvem.aposta.getIdLegado();
+    protected ReservaCotaBolao fetch(NuvemIntegracaoReserva nuvem) {
+        Long idLegadoAposta = nuvem.aposta.getIdLegado();
         if (idLegadoAposta == null) throw new IllegalStateException("id legado da aposta é null");
         Aposta<?> aposta = apostaDAO.findById(idLegadoAposta);
         ReservaCotaBolao reserva = aposta.getReservaCotaBolao();
-        mapper.map(reservaNuvem, reserva);
         return reserva;
     }
 
@@ -56,8 +51,8 @@ public class ReservaCotaBolaoSynchronizer
     protected ReservaCotaBolao update(NuvemIntegracaoReserva reservaNuvem) {
         ReservaCotaBolao reserva = find(reservaNuvem);
         if (reserva == null) throw new IllegalStateException("num achei a reserva pow");
-        resolveRelations(reservaNuvem, reserva);
-        ReservaCotaBolao x = reservaCotaBolaoDAO.update(reserva);
+        resolve(reservaNuvem, reserva);
+        ReservaCotaBolao x = dao.update(reserva);
         if (x != reserva) throw new IllegalStateException("entidade reserva retornada não é a mesma do cache");
         return reserva;
     }
@@ -65,24 +60,21 @@ public class ReservaCotaBolaoSynchronizer
     @Override
     protected ReservaCotaBolao create(NuvemIntegracaoReserva reservaNuvem) {
         ReservaCotaBolao reserva = find(reservaNuvem);
-        // resolveRelations(reservaNuvem, reserva);
-        ReservaCotaBolaoPK pk = new ReservaCotaBolaoPK( IntegracaoUtil.getMesAtual(), IntegracaoUtil.getParticao(reservaNuvem.nsu));
-        // TODO: conferir se essa geração de partição é aceitável
+        resolve(reservaNuvem, reserva);
+        ReservaCotaBolaoPK pk = new ReservaCotaBolaoPK(IntegracaoUtil.getMesAtual(), IntegracaoUtil.getParticao(reservaNuvem.nsu));
         reserva.setId(pk);
-        reserva.setAno(IntegracaoUtil.getAnoAtual());
-        reserva.setLoterica(recuperarLoterica(reservaNuvem.loterica));
-        reservaCotaBolaoDAO.insert(reserva);
-        Aposta<?> aposta = this.context.getCache().find(reservaNuvem.aposta.getIdNuvem(), Aposta.class);
-        reserva.setAposta(aposta);
+        dao.insert(reserva);
         return reserva;
     }
 
     @Override
-    protected void resolveRelations(NuvemIntegracaoReserva reservaNuvem, ReservaCotaBolao reserva) {
-        Aposta<?> aposta = this.context.getCache().find(reservaNuvem.aposta.getIdNuvem(), Aposta.class);
-        reserva.setAposta(aposta);
-        reserva.setAno(IntegracaoUtil.getAnoAtual());
+    protected void resolve(NuvemIntegracaoReserva reservaNuvem, ReservaCotaBolao reserva) {
         reserva.setLoterica(recuperarLoterica(reservaNuvem.loterica));
+        reserva.setSituacao(recuperarSituacaoReservaCotaBolao(reservaNuvem.situacao));
+    }
+
+    private SituacaoReservaCotaBolao recuperarSituacaoReservaCotaBolao(Long situacao) {
+        return situacaoReservaCotaBolaoDAO.findById(situacao);
     }
 
     private Loterica recuperarLoterica(NuvemIntegracaoLoterica loterica) {
