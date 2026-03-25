@@ -4,12 +4,17 @@ import java.io.Serializable;
 
 import javax.persistence.Column;
 import javax.persistence.Embeddable;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
+import javax.persistence.SequenceGenerator;
 
 @Embeddable
 public class ReservaCotaBolaoPK implements Serializable {
 
 	private static final long serialVersionUID = 1L;
 
+	@GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "NU_RESERVA_COTA_BOLAO")
+	@SequenceGenerator(name = "NU_RESERVA_COTA_BOLAO", sequenceName = "LCE.LCESQ059_NU_RESERVA_COTA_BOLAO", allocationSize = 1)
 	@Column(name = "NU_RESERVA_COTA_BOLAO")
 	private Long id;
 	
