@@ -12,6 +12,7 @@ import com.google.gson.JsonObject;
 import br.gov.caixa.silce.dominio.servico.compra.MsgNuvemIntegracaoCompraConfirmacao;
 import br.gov.caixa.silce.dominio.servico.compra.MsgNuvemIntegracaoCompraSolicitacao;
 import br.gov.caixa.silce.dominio.servico.compra.NuvemIntegracaoAposta;
+import br.gov.caixa.silce.dominio.servico.compra.NuvemIntegracaoCombo;
 import br.gov.caixa.silce.dominio.servico.compra.NuvemIntegracaoCompra;
 import br.gov.caixa.silce.dominio.servico.compra.NuvemIntegracaoReserva;
 import br.gov.caixa.silce.servico.conversor.AbstractJsonConversor;
@@ -73,26 +74,23 @@ public class NuvemIntegracaoCompraConversor
         mapper.addMixInAnnotations(NuvemIntegracaoCompra.class, JsonIdentityInfoMixin.class);
         mapper.addMixInAnnotations(NuvemIntegracaoAposta.class, JsonIdentityInfoMixin.class);
         mapper.addMixInAnnotations(NuvemIntegracaoReserva.class, JsonIdentityInfoMixin.class);
+        mapper.addMixInAnnotations(NuvemIntegracaoCombo.class, JsonIdentityInfoMixin.class);
 
         try {
-            MsgNuvemIntegracaoCompraSolicitacao parsed =
-                    mapper.readValue(json, MsgNuvemIntegracaoCompraSolicitacao.class);
+            MsgNuvemIntegracaoCompraSolicitacao parsed = mapper.readValue(json, MsgNuvemIntegracaoCompraSolicitacao.class);
 
             // TODO melhorar validações
 
-            if (parsed.apostador == null || parsed.apostador.idNuvem == null) {
-                throw new IllegalArgumentException(
-                        "Campo 'apostador' ou 'apostador.idNuvem' está ausente.");
+            if (parsed.compra.apostador == null || parsed.compra.apostador.idNuvem == null) {
+                throw new IllegalArgumentException("Campo 'apostador' ou 'apostador.idNuvem' está ausente.");
             }
 
             if (parsed.compra == null || parsed.compra.idNuvem == null) {
-                throw new IllegalArgumentException(
-                        "Campo 'compra' ou 'compra.idNuvem' está ausente.");
+                throw new IllegalArgumentException("Campo 'compra' ou 'compra.idNuvem' está ausente.");
             }
 
             if (parsed.apostas == null || parsed.apostas.isEmpty()) {
-                throw new IllegalArgumentException(
-                        "Campo 'apostas' está ausente ou vazio.");
+                throw new IllegalArgumentException("Campo 'apostas' está ausente ou vazio.");
             }
 
             return parsed;
