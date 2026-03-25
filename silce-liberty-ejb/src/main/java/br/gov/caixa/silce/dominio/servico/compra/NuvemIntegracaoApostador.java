@@ -51,6 +51,29 @@ public class NuvemIntegracaoApostador extends DTONuvem implements IdLegado, IdNu
 
     public Date dataUltimoAceiteTermoDeUso;
 
+    public String mercadoPagoCustomerId;
+
+    public String dataSelecaoLoterica;
+
+    public Long limiteDiario;
+
+    public Long limiteDiarioAutorizado;
+
+    public Integer subcanal;
+
+    public Boolean aceitaTermosUso;
+
+    public Date dataFimBloqueioVinculacao;
+
+    public Boolean autoAvaliacaoRespondida;
+
+    public Date dataRespostaAutoAvaliacao;
+
+    public Date dataProximaRespostaAutoavaliacao;
+
+    public Date dataUltimaConsultaSicow;
+
+
     public NuvemIntegracaoApostador() {
 
     }

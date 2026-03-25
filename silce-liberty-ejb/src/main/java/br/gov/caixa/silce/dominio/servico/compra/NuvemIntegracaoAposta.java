@@ -38,6 +38,16 @@ public class NuvemIntegracaoAposta extends DTONuvem implements IdLegado, IdNuvem
 
     public Integer qtdTeimosinhas;
 
+    public String prognostico;
+
+    public String comboAposta;
+
+    public String nuCombo;
+
+    public Boolean indicadorBolao;
+
+    public String camposEspecificosModalidade;
+
     public NuvemIntegracaoAposta() {
     }
 

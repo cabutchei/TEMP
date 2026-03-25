@@ -16,8 +16,6 @@ public class MsgNuvemIntegracaoCompraSolicitacao extends SaidaBroker {
 
     public String tipoSolicitacao;
 
-    public NuvemIntegracaoApostador apostador;
-
     public NuvemIntegracaoCompra compra;
 
     public List<NuvemIntegracaoAposta> apostas;
@@ -29,7 +27,6 @@ public class MsgNuvemIntegracaoCompraSolicitacao extends SaidaBroker {
     }
 
     public MsgNuvemIntegracaoCompraSolicitacao( NuvemIntegracaoApostador apostador, NuvemIntegracaoCompra compra, List<NuvemIntegracaoAposta> apostas) {
-        this.apostador = apostador;
         this.compra = compra;
         this.apostas = apostas;
     }
