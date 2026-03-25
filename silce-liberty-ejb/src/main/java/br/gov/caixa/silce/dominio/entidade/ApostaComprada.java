@@ -98,6 +98,8 @@ import br.gov.caixa.util.StringUtil;
 		@NamedQuery(name = ApostaComprada.NQ_SELECT_BY_NSU_DATA,
 			query = "Select entidade From ApostaComprada entidade where entidade.nsuTransacao = ?1 and entidade.dataEnvioSISPL = ?2"),
 
+		@NamedQuery(name = ApostaComprada.NQ_SELECT_BY_NSU, query = "Select entidade From ApostaComprada entidade where entidade.nsuTransacao = ?1"),
+
 		@NamedQuery(name = ApostaComprada.NQ_SELECT_BY_APOSTA_APOSTADOR,
 			query = "Select entidade From ApostaComprada entidade join fetch entidade.aposta join fetch entidade.aposta.compra"
 				+ " where entidade.aposta.id = ?1 and entidade.aposta.compra.apostador.id = ?2"),
