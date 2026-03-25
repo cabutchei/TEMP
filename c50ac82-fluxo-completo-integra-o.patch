@@ -24,14 +24,14 @@ Content-Transfer-Encoding: 8bit
  .../mappers/CompraMapper.java                 |  23 +-
  .../mappers/ReservaCotaBolaoMapper.java       |   9 +-
  16 files changed, 606 insertions(+), 534 deletions(-)
- create mode 100644 silce-liberty-ejb/src/main/java/br/gov/caixa/silce/negocio/integracaocompra/importers/AbstractIdNuvemLegadoSynchronizer.java
- create mode 100644 silce-liberty-ejb/src/main/java/br/gov/caixa/silce/negocio/integracaocompra/importers/AbstractIdNuvemSynchronizer.java
- delete mode 100644 silce-liberty-ejb/src/main/java/br/gov/caixa/silce/negocio/integracaocompra/importers/IntegracaoSynchronizer.java
+ create mode 100644 silce-negocio/ejbModule/br/gov/caixa/silce/negocio/integracaocompra/importers/AbstractIdNuvemLegadoSynchronizer.java
+ create mode 100644 silce-negocio/ejbModule/br/gov/caixa/silce/negocio/integracaocompra/importers/AbstractIdNuvemSynchronizer.java
+ delete mode 100644 silce-negocio/ejbModule/br/gov/caixa/silce/negocio/integracaocompra/importers/IntegracaoSynchronizer.java
 
-diff --git a/silce-liberty-ejb/src/main/java/br/gov/caixa/silce/negocio/integracaocompra/ControlaIntegracaoCompraBean.java b/silce-liberty-ejb/src/main/java/br/gov/caixa/silce/negocio/integracaocompra/ControlaIntegracaoCompraBean.java
+diff --git a/silce-negocio/ejbModule/br/gov/caixa/silce/negocio/integracaocompra/ControlaIntegracaoCompraBean.java b/silce-negocio/ejbModule/br/gov/caixa/silce/negocio/integracaocompra/ControlaIntegracaoCompraBean.java
 index 3b5ffd3..ea0b574 100644
---- a/silce-liberty-ejb/src/main/java/br/gov/caixa/silce/negocio/integracaocompra/ControlaIntegracaoCompraBean.java
-+++ b/silce-liberty-ejb/src/main/java/br/gov/caixa/silce/negocio/integracaocompra/ControlaIntegracaoCompraBean.java
+--- a/silce-negocio/ejbModule/br/gov/caixa/silce/negocio/integracaocompra/ControlaIntegracaoCompraBean.java
++++ b/silce-negocio/ejbModule/br/gov/caixa/silce/negocio/integracaocompra/ControlaIntegracaoCompraBean.java
 @@ -1,7 +1,5 @@
  package br.gov.caixa.silce.negocio.integracaocompra;
  
@@ -366,11 +366,11 @@ index 3b5ffd3..ea0b574 100644
 +        LOG.warn("Notificando erro de integracao para a nuvem. IdCompraNuvem: {0}, Erro: {1}", idSolicitacao, e.toString());
      }
  }
-diff --git a/silce-liberty-ejb/src/main/java/br/gov/caixa/silce/negocio/integracaocompra/importers/AbstractIdNuvemLegadoSynchronizer.java b/silce-liberty-ejb/src/main/java/br/gov/caixa/silce/negocio/integracaocompra/importers/AbstractIdNuvemLegadoSynchronizer.java
+diff --git a/silce-negocio/ejbModule/br/gov/caixa/silce/negocio/integracaocompra/importers/AbstractIdNuvemLegadoSynchronizer.java b/silce-negocio/ejbModule/br/gov/caixa/silce/negocio/integracaocompra/importers/AbstractIdNuvemLegadoSynchronizer.java
 new file mode 100644
 index 0000000..afa3366
 --- /dev/null
-+++ b/silce-liberty-ejb/src/main/java/br/gov/caixa/silce/negocio/integracaocompra/importers/AbstractIdNuvemLegadoSynchronizer.java
++++ b/silce-negocio/ejbModule/br/gov/caixa/silce/negocio/integracaocompra/importers/AbstractIdNuvemLegadoSynchronizer.java
 @@ -0,0 +1,25 @@
 +package br.gov.caixa.silce.negocio.integracaocompra.importers;
 +
@@ -397,11 +397,11 @@ index 0000000..afa3366
 +    }
 +    
 +}
-diff --git a/silce-liberty-ejb/src/main/java/br/gov/caixa/silce/negocio/integracaocompra/importers/AbstractIdNuvemSynchronizer.java b/silce-liberty-ejb/src/main/java/br/gov/caixa/silce/negocio/integracaocompra/importers/AbstractIdNuvemSynchronizer.java
+diff --git a/silce-negocio/ejbModule/br/gov/caixa/silce/negocio/integracaocompra/importers/AbstractIdNuvemSynchronizer.java b/silce-negocio/ejbModule/br/gov/caixa/silce/negocio/integracaocompra/importers/AbstractIdNuvemSynchronizer.java
 new file mode 100644
 index 0000000..4d1e350
 --- /dev/null
-+++ b/silce-liberty-ejb/src/main/java/br/gov/caixa/silce/negocio/integracaocompra/importers/AbstractIdNuvemSynchronizer.java
++++ b/silce-negocio/ejbModule/br/gov/caixa/silce/negocio/integracaocompra/importers/AbstractIdNuvemSynchronizer.java
 @@ -0,0 +1,20 @@
 +package br.gov.caixa.silce.negocio.integracaocompra.importers;
 +
@@ -423,10 +423,10 @@ index 0000000..4d1e350
 +        return find(id);
 +    }
 +}
-diff --git a/silce-liberty-ejb/src/main/java/br/gov/caixa/silce/negocio/integracaocompra/importers/AbstractIntegracaoSynchronizer.java b/silce-liberty-ejb/src/main/java/br/gov/caixa/silce/negocio/integracaocompra/importers/AbstractIntegracaoSynchronizer.java
+diff --git a/silce-negocio/ejbModule/br/gov/caixa/silce/negocio/integracaocompra/importers/AbstractIntegracaoSynchronizer.java b/silce-negocio/ejbModule/br/gov/caixa/silce/negocio/integracaocompra/importers/AbstractIntegracaoSynchronizer.java
 index e062c92..94d78ce 100644
---- a/silce-liberty-ejb/src/main/java/br/gov/caixa/silce/negocio/integracaocompra/importers/AbstractIntegracaoSynchronizer.java
-+++ b/silce-liberty-ejb/src/main/java/br/gov/caixa/silce/negocio/integracaocompra/importers/AbstractIntegracaoSynchronizer.java
+--- a/silce-negocio/ejbModule/br/gov/caixa/silce/negocio/integracaocompra/importers/AbstractIntegracaoSynchronizer.java
++++ b/silce-negocio/ejbModule/br/gov/caixa/silce/negocio/integracaocompra/importers/AbstractIntegracaoSynchronizer.java
 @@ -1,7 +1,7 @@
  package br.gov.caixa.silce.negocio.integracaocompra.importers;
  
@@ -790,10 +790,10 @@ index e062c92..94d78ce 100644
  
          private Mode(int mode) {
              this.mode = mode;
-diff --git a/silce-liberty-ejb/src/main/java/br/gov/caixa/silce/negocio/integracaocompra/importers/ApostaCompradaSynchronizer.java b/silce-liberty-ejb/src/main/java/br/gov/caixa/silce/negocio/integracaocompra/importers/ApostaCompradaSynchronizer.java
+diff --git a/silce-negocio/ejbModule/br/gov/caixa/silce/negocio/integracaocompra/importers/ApostaCompradaSynchronizer.java b/silce-negocio/ejbModule/br/gov/caixa/silce/negocio/integracaocompra/importers/ApostaCompradaSynchronizer.java
 index 6697997..697fef5 100644
---- a/silce-liberty-ejb/src/main/java/br/gov/caixa/silce/negocio/integracaocompra/importers/ApostaCompradaSynchronizer.java
-+++ b/silce-liberty-ejb/src/main/java/br/gov/caixa/silce/negocio/integracaocompra/importers/ApostaCompradaSynchronizer.java
+--- a/silce-negocio/ejbModule/br/gov/caixa/silce/negocio/integracaocompra/importers/ApostaCompradaSynchronizer.java
++++ b/silce-negocio/ejbModule/br/gov/caixa/silce/negocio/integracaocompra/importers/ApostaCompradaSynchronizer.java
 @@ -5,30 +5,30 @@ import javax.naming.NamingException;
  import br.gov.caixa.silce.dominio.entidade.Aposta;
  import br.gov.caixa.silce.dominio.entidade.ApostaComprada;
@@ -906,10 +906,10 @@ index 6697997..697fef5 100644
          }
  
          entity.setAposta(aposta);
-diff --git a/silce-liberty-ejb/src/main/java/br/gov/caixa/silce/negocio/integracaocompra/importers/ApostaSynchronizer.java b/silce-liberty-ejb/src/main/java/br/gov/caixa/silce/negocio/integracaocompra/importers/ApostaSynchronizer.java
+diff --git a/silce-negocio/ejbModule/br/gov/caixa/silce/negocio/integracaocompra/importers/ApostaSynchronizer.java b/silce-negocio/ejbModule/br/gov/caixa/silce/negocio/integracaocompra/importers/ApostaSynchronizer.java
 index 8f236c4..398cc84 100644
---- a/silce-liberty-ejb/src/main/java/br/gov/caixa/silce/negocio/integracaocompra/importers/ApostaSynchronizer.java
-+++ b/silce-liberty-ejb/src/main/java/br/gov/caixa/silce/negocio/integracaocompra/importers/ApostaSynchronizer.java
+--- a/silce-negocio/ejbModule/br/gov/caixa/silce/negocio/integracaocompra/importers/ApostaSynchronizer.java
++++ b/silce-negocio/ejbModule/br/gov/caixa/silce/negocio/integracaocompra/importers/ApostaSynchronizer.java
 @@ -12,88 +12,52 @@ import br.gov.caixa.silce.dominio.entidade.ComboAposta;
  import br.gov.caixa.silce.dominio.entidade.Compra;
  import br.gov.caixa.silce.dominio.entidade.ReservaCotaBolao;
@@ -1116,10 +1116,10 @@ index 8f236c4..398cc84 100644
          aposta.setReservaCotaBolao(reserva);
      }
  }
-diff --git a/silce-liberty-ejb/src/main/java/br/gov/caixa/silce/negocio/integracaocompra/importers/ComboApostaSynchronizer.java b/silce-liberty-ejb/src/main/java/br/gov/caixa/silce/negocio/integracaocompra/importers/ComboApostaSynchronizer.java
+diff --git a/silce-negocio/ejbModule/br/gov/caixa/silce/negocio/integracaocompra/importers/ComboApostaSynchronizer.java b/silce-negocio/ejbModule/br/gov/caixa/silce/negocio/integracaocompra/importers/ComboApostaSynchronizer.java
 index cbcbff7..aca676c 100644
---- a/silce-liberty-ejb/src/main/java/br/gov/caixa/silce/negocio/integracaocompra/importers/ComboApostaSynchronizer.java
-+++ b/silce-liberty-ejb/src/main/java/br/gov/caixa/silce/negocio/integracaocompra/importers/ComboApostaSynchronizer.java
+--- a/silce-negocio/ejbModule/br/gov/caixa/silce/negocio/integracaocompra/importers/ComboApostaSynchronizer.java
++++ b/silce-negocio/ejbModule/br/gov/caixa/silce/negocio/integracaocompra/importers/ComboApostaSynchronizer.java
 @@ -3,22 +3,25 @@ package br.gov.caixa.silce.negocio.integracaocompra.importers;
  import javax.naming.NamingException;
  
@@ -1201,10 +1201,10 @@ index cbcbff7..aca676c 100644
 +        return tipoComboDAO.findById(tipoCombo);
 +    }
  }
-diff --git a/silce-liberty-ejb/src/main/java/br/gov/caixa/silce/negocio/integracaocompra/importers/CompraSynchronizer.java b/silce-liberty-ejb/src/main/java/br/gov/caixa/silce/negocio/integracaocompra/importers/CompraSynchronizer.java
+diff --git a/silce-negocio/ejbModule/br/gov/caixa/silce/negocio/integracaocompra/importers/CompraSynchronizer.java b/silce-negocio/ejbModule/br/gov/caixa/silce/negocio/integracaocompra/importers/CompraSynchronizer.java
 index 30e0e85..7fc7409 100644
---- a/silce-liberty-ejb/src/main/java/br/gov/caixa/silce/negocio/integracaocompra/importers/CompraSynchronizer.java
-+++ b/silce-liberty-ejb/src/main/java/br/gov/caixa/silce/negocio/integracaocompra/importers/CompraSynchronizer.java
+--- a/silce-negocio/ejbModule/br/gov/caixa/silce/negocio/integracaocompra/importers/CompraSynchronizer.java
++++ b/silce-negocio/ejbModule/br/gov/caixa/silce/negocio/integracaocompra/importers/CompraSynchronizer.java
 @@ -13,77 +13,56 @@ import br.gov.caixa.silce.dominio.entidade.SituacaoCompra;
  import br.gov.caixa.silce.dominio.servico.compra.NuvemIntegracaoApostador;
  import br.gov.caixa.silce.dominio.servico.compra.NuvemIntegracaoCompra;
@@ -1312,10 +1312,10 @@ index 30e0e85..7fc7409 100644
          Apostador apostador = recuperarApostador(compraNuvem.apostador);
          compra.setApostador(apostador);
          compra.setCompraIntegrada(true);
-diff --git a/silce-liberty-ejb/src/main/java/br/gov/caixa/silce/negocio/integracaocompra/importers/IntegracaoSynchronizer.java b/silce-liberty-ejb/src/main/java/br/gov/caixa/silce/negocio/integracaocompra/importers/IntegracaoSynchronizer.java
+diff --git a/silce-negocio/ejbModule/br/gov/caixa/silce/negocio/integracaocompra/importers/IntegracaoSynchronizer.java b/silce-negocio/ejbModule/br/gov/caixa/silce/negocio/integracaocompra/importers/IntegracaoSynchronizer.java
 deleted file mode 100644
 index be91ba4..0000000
---- a/silce-liberty-ejb/src/main/java/br/gov/caixa/silce/negocio/integracaocompra/importers/IntegracaoSynchronizer.java
+--- a/silce-negocio/ejbModule/br/gov/caixa/silce/negocio/integracaocompra/importers/IntegracaoSynchronizer.java
 +++ /dev/null
 @@ -1,24 +0,0 @@
 -package br.gov.caixa.silce.negocio.integracaocompra.importers;
@@ -1342,10 +1342,10 @@ index be91ba4..0000000
 -        return find(id);
 -    }
 -}
-diff --git a/silce-liberty-ejb/src/main/java/br/gov/caixa/silce/negocio/integracaocompra/importers/ReservaCotaBolaoSynchronizer.java b/silce-liberty-ejb/src/main/java/br/gov/caixa/silce/negocio/integracaocompra/importers/ReservaCotaBolaoSynchronizer.java
+diff --git a/silce-negocio/ejbModule/br/gov/caixa/silce/negocio/integracaocompra/importers/ReservaCotaBolaoSynchronizer.java b/silce-negocio/ejbModule/br/gov/caixa/silce/negocio/integracaocompra/importers/ReservaCotaBolaoSynchronizer.java
 index ef73c52..26f1f04 100644
---- a/silce-liberty-ejb/src/main/java/br/gov/caixa/silce/negocio/integracaocompra/importers/ReservaCotaBolaoSynchronizer.java
-+++ b/silce-liberty-ejb/src/main/java/br/gov/caixa/silce/negocio/integracaocompra/importers/ReservaCotaBolaoSynchronizer.java
+--- a/silce-negocio/ejbModule/br/gov/caixa/silce/negocio/integracaocompra/importers/ReservaCotaBolaoSynchronizer.java
++++ b/silce-negocio/ejbModule/br/gov/caixa/silce/negocio/integracaocompra/importers/ReservaCotaBolaoSynchronizer.java
 @@ -10,45 +10,40 @@ import br.gov.caixa.silce.dominio.entidade.Aposta;
  import br.gov.caixa.silce.dominio.entidade.Loterica;
  import br.gov.caixa.silce.dominio.entidade.ReservaCotaBolao;
@@ -1456,10 +1456,10 @@ index ef73c52..26f1f04 100644
      }
  
      private Loterica recuperarLoterica(NuvemIntegracaoLoterica loterica) {
-diff --git a/silce-liberty-ejb/src/main/java/br/gov/caixa/silce/negocio/integracaocompra/importers/SyncContext.java b/silce-liberty-ejb/src/main/java/br/gov/caixa/silce/negocio/integracaocompra/importers/SyncContext.java
+diff --git a/silce-negocio/ejbModule/br/gov/caixa/silce/negocio/integracaocompra/importers/SyncContext.java b/silce-negocio/ejbModule/br/gov/caixa/silce/negocio/integracaocompra/importers/SyncContext.java
 index 2e7a7b9..2ca554b 100644
---- a/silce-liberty-ejb/src/main/java/br/gov/caixa/silce/negocio/integracaocompra/importers/SyncContext.java
-+++ b/silce-liberty-ejb/src/main/java/br/gov/caixa/silce/negocio/integracaocompra/importers/SyncContext.java
+--- a/silce-negocio/ejbModule/br/gov/caixa/silce/negocio/integracaocompra/importers/SyncContext.java
++++ b/silce-negocio/ejbModule/br/gov/caixa/silce/negocio/integracaocompra/importers/SyncContext.java
 @@ -1,8 +1,13 @@
  package br.gov.caixa.silce.negocio.integracaocompra.importers;
  
@@ -1616,10 +1616,10 @@ index 2e7a7b9..2ca554b 100644
          }
      }
  }
-diff --git a/silce-liberty-ejb/src/main/java/br/gov/caixa/silce/negocio/integracaocompra/mappers/ApostaCompradaMapper.java b/silce-liberty-ejb/src/main/java/br/gov/caixa/silce/negocio/integracaocompra/mappers/ApostaCompradaMapper.java
+diff --git a/silce-negocio/ejbModule/br/gov/caixa/silce/negocio/integracaocompra/mappers/ApostaCompradaMapper.java b/silce-negocio/ejbModule/br/gov/caixa/silce/negocio/integracaocompra/mappers/ApostaCompradaMapper.java
 index 463f2f7..58e9e14 100644
---- a/silce-liberty-ejb/src/main/java/br/gov/caixa/silce/negocio/integracaocompra/mappers/ApostaCompradaMapper.java
-+++ b/silce-liberty-ejb/src/main/java/br/gov/caixa/silce/negocio/integracaocompra/mappers/ApostaCompradaMapper.java
+--- a/silce-negocio/ejbModule/br/gov/caixa/silce/negocio/integracaocompra/mappers/ApostaCompradaMapper.java
++++ b/silce-negocio/ejbModule/br/gov/caixa/silce/negocio/integracaocompra/mappers/ApostaCompradaMapper.java
 @@ -7,19 +7,25 @@ import br.gov.caixa.silce.dominio.Subcanal;
  import br.gov.caixa.silce.dominio.servico.compra.NuvemIntegracaoApostaComprada;
  import br.gov.caixa.util.Decimal;
@@ -1650,10 +1650,10 @@ index 463f2f7..58e9e14 100644
          apostaComprada.setIndicadorBloqueioDevolucao( apostaCompradaNuvem.bloqueioDevolucao);
  
          apostaComprada.setDataEfetivacaoSISPL(IntegracaoUtil.extrairData(apostaCompradaNuvem.tsEfetivacaoSispl));
-diff --git a/silce-liberty-ejb/src/main/java/br/gov/caixa/silce/negocio/integracaocompra/mappers/ApostaMapper.java b/silce-liberty-ejb/src/main/java/br/gov/caixa/silce/negocio/integracaocompra/mappers/ApostaMapper.java
+diff --git a/silce-negocio/ejbModule/br/gov/caixa/silce/negocio/integracaocompra/mappers/ApostaMapper.java b/silce-negocio/ejbModule/br/gov/caixa/silce/negocio/integracaocompra/mappers/ApostaMapper.java
 index 9a2521a..75c5ecc 100644
---- a/silce-liberty-ejb/src/main/java/br/gov/caixa/silce/negocio/integracaocompra/mappers/ApostaMapper.java
-+++ b/silce-liberty-ejb/src/main/java/br/gov/caixa/silce/negocio/integracaocompra/mappers/ApostaMapper.java
+--- a/silce-negocio/ejbModule/br/gov/caixa/silce/negocio/integracaocompra/mappers/ApostaMapper.java
++++ b/silce-negocio/ejbModule/br/gov/caixa/silce/negocio/integracaocompra/mappers/ApostaMapper.java
 @@ -1,12 +1,18 @@
  package br.gov.caixa.silce.negocio.integracaocompra.mappers;
  
@@ -1694,10 +1694,10 @@ index 9a2521a..75c5ecc 100644
          return aposta;
      }
  }
-diff --git a/silce-liberty-ejb/src/main/java/br/gov/caixa/silce/negocio/integracaocompra/mappers/ComboApostaMapper.java b/silce-liberty-ejb/src/main/java/br/gov/caixa/silce/negocio/integracaocompra/mappers/ComboApostaMapper.java
+diff --git a/silce-negocio/ejbModule/br/gov/caixa/silce/negocio/integracaocompra/mappers/ComboApostaMapper.java b/silce-negocio/ejbModule/br/gov/caixa/silce/negocio/integracaocompra/mappers/ComboApostaMapper.java
 index 5fcc76a..625ef62 100644
---- a/silce-liberty-ejb/src/main/java/br/gov/caixa/silce/negocio/integracaocompra/mappers/ComboApostaMapper.java
-+++ b/silce-liberty-ejb/src/main/java/br/gov/caixa/silce/negocio/integracaocompra/mappers/ComboApostaMapper.java
+--- a/silce-negocio/ejbModule/br/gov/caixa/silce/negocio/integracaocompra/mappers/ComboApostaMapper.java
++++ b/silce-negocio/ejbModule/br/gov/caixa/silce/negocio/integracaocompra/mappers/ComboApostaMapper.java
 @@ -4,10 +4,15 @@ import br.gov.caixa.silce.dominio.entidade.ComboAposta;
  import br.gov.caixa.silce.dominio.servico.compra.NuvemIntegracaoCombo;
  import br.gov.caixa.silce.negocio.integracaocompra.IntegracaoUtil;
@@ -1715,10 +1715,10 @@ index 5fcc76a..625ef62 100644
          combo.setMes((long) IntegracaoUtil.getMesAtual());
          combo.setParticao( (long) IntegracaoUtil.getParticao(comboApostaNuvem.idNuvem)); // TODO conferir se essa geração de partição é aceitável
          // obs: o campo de data é transiente e, até onde investiguei, nem sequer é preenchido no fluxo atual do carrinho nuvem
-diff --git a/silce-liberty-ejb/src/main/java/br/gov/caixa/silce/negocio/integracaocompra/mappers/CompraMapper.java b/silce-liberty-ejb/src/main/java/br/gov/caixa/silce/negocio/integracaocompra/mappers/CompraMapper.java
+diff --git a/silce-negocio/ejbModule/br/gov/caixa/silce/negocio/integracaocompra/mappers/CompraMapper.java b/silce-negocio/ejbModule/br/gov/caixa/silce/negocio/integracaocompra/mappers/CompraMapper.java
 index 9109c26..a516983 100644
---- a/silce-liberty-ejb/src/main/java/br/gov/caixa/silce/negocio/integracaocompra/mappers/CompraMapper.java
-+++ b/silce-liberty-ejb/src/main/java/br/gov/caixa/silce/negocio/integracaocompra/mappers/CompraMapper.java
+--- a/silce-negocio/ejbModule/br/gov/caixa/silce/negocio/integracaocompra/mappers/CompraMapper.java
++++ b/silce-negocio/ejbModule/br/gov/caixa/silce/negocio/integracaocompra/mappers/CompraMapper.java
 @@ -6,12 +6,14 @@ import br.gov.caixa.silce.dominio.servico.compra.NuvemIntegracaoCompra;
  import br.gov.caixa.silce.negocio.integracaocompra.IntegracaoUtil;
  import br.gov.caixa.util.Decimal;
@@ -1769,10 +1769,10 @@ index 9109c26..a516983 100644
 +
      }
  }
-diff --git a/silce-liberty-ejb/src/main/java/br/gov/caixa/silce/negocio/integracaocompra/mappers/ReservaCotaBolaoMapper.java b/silce-liberty-ejb/src/main/java/br/gov/caixa/silce/negocio/integracaocompra/mappers/ReservaCotaBolaoMapper.java
+diff --git a/silce-negocio/ejbModule/br/gov/caixa/silce/negocio/integracaocompra/mappers/ReservaCotaBolaoMapper.java b/silce-negocio/ejbModule/br/gov/caixa/silce/negocio/integracaocompra/mappers/ReservaCotaBolaoMapper.java
 index 617d4dc..bf72093 100644
---- a/silce-liberty-ejb/src/main/java/br/gov/caixa/silce/negocio/integracaocompra/mappers/ReservaCotaBolaoMapper.java
-+++ b/silce-liberty-ejb/src/main/java/br/gov/caixa/silce/negocio/integracaocompra/mappers/ReservaCotaBolaoMapper.java
+--- a/silce-negocio/ejbModule/br/gov/caixa/silce/negocio/integracaocompra/mappers/ReservaCotaBolaoMapper.java
++++ b/silce-negocio/ejbModule/br/gov/caixa/silce/negocio/integracaocompra/mappers/ReservaCotaBolaoMapper.java
 @@ -5,14 +5,21 @@ import br.gov.caixa.silce.dominio.servico.compra.NuvemIntegracaoReserva;
  import br.gov.caixa.silce.negocio.integracaocompra.IntegracaoUtil;
  import br.gov.caixa.util.Decimal;
