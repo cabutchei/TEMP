@@ -1,0 +1,1801 @@
+From c50ac829b673bab8d7bad238eadcc77c38ea0afa Mon Sep 17 00:00:00 2001
+From: cabutchei <luropa_paz@hotmail.com>
+Date: Wed, 25 Mar 2026 12:10:48 -0300
+Subject: [PATCH] =?UTF-8?q?fluxo=20completo=20integra=C3=A7=C3=A3o?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+---
+ .../ControlaIntegracaoCompraBean.java         | 237 +++++----------
+ .../AbstractIdNuvemLegadoSynchronizer.java    |  25 ++
+ .../AbstractIdNuvemSynchronizer.java          |  20 ++
+ .../AbstractIntegracaoSynchronizer.java       | 285 +++++++++++++-----
+ .../importers/ApostaCompradaSynchronizer.java |  64 ++--
+ .../importers/ApostaSynchronizer.java         | 143 +++------
+ .../importers/ComboApostaSynchronizer.java    |  42 ++-
+ .../importers/CompraSynchronizer.java         |  79 ++---
+ .../importers/IntegracaoSynchronizer.java     |  24 --
+ .../ReservaCotaBolaoSynchronizer.java         |  68 ++---
+ .../importers/SyncContext.java                |  85 +++++-
+ .../mappers/ApostaCompradaMapper.java         |  14 +-
+ .../mappers/ApostaMapper.java                 |  15 +-
+ .../mappers/ComboApostaMapper.java            |   7 +-
+ .../mappers/CompraMapper.java                 |  23 +-
+ .../mappers/ReservaCotaBolaoMapper.java       |   9 +-
+ 16 files changed, 606 insertions(+), 534 deletions(-)
+ create mode 100644 silce-liberty-ejb/src/main/java/br/gov/caixa/silce/negocio/integracaocompra/importers/AbstractIdNuvemLegadoSynchronizer.java
+ create mode 100644 silce-liberty-ejb/src/main/java/br/gov/caixa/silce/negocio/integracaocompra/importers/AbstractIdNuvemSynchronizer.java
+ delete mode 100644 silce-liberty-ejb/src/main/java/br/gov/caixa/silce/negocio/integracaocompra/importers/IntegracaoSynchronizer.java
+
+diff --git a/silce-liberty-ejb/src/main/java/br/gov/caixa/silce/negocio/integracaocompra/ControlaIntegracaoCompraBean.java b/silce-liberty-ejb/src/main/java/br/gov/caixa/silce/negocio/integracaocompra/ControlaIntegracaoCompraBean.java
+index 3b5ffd3..ea0b574 100644
+--- a/silce-liberty-ejb/src/main/java/br/gov/caixa/silce/negocio/integracaocompra/ControlaIntegracaoCompraBean.java
++++ b/silce-liberty-ejb/src/main/java/br/gov/caixa/silce/negocio/integracaocompra/ControlaIntegracaoCompraBean.java
+@@ -1,7 +1,5 @@
+ package br.gov.caixa.silce.negocio.integracaocompra;
+ 
+-import java.util.Date;
+-import java.util.HashMap;
+ import java.util.List;
+ import java.util.Map;
+ 
+@@ -13,62 +11,36 @@ import org.apache.logging.log4j.Logger;
+ import org.apache.logging.log4j.message.MessageFormatMessageFactory;
+ 
+ import br.gov.caixa.silce.dominio.entidade.Aposta;
+-import br.gov.caixa.silce.dominio.entidade.ApostaComprada;
+-import br.gov.caixa.silce.dominio.entidade.Apostador;
++import br.gov.caixa.silce.dominio.entidade.ComboAposta;
+ import br.gov.caixa.silce.dominio.entidade.Compra;
+ import br.gov.caixa.silce.dominio.servico.compra.MsgNuvemIntegracaoCompraConfirmacao;
+ import br.gov.caixa.silce.dominio.servico.compra.MsgNuvemIntegracaoCompraSolicitacao;
+ import br.gov.caixa.silce.dominio.servico.compra.NuvemIntegracaoAposta;
+-import br.gov.caixa.silce.dominio.servico.compra.NuvemIntegracaoApostador;
+ import br.gov.caixa.silce.dominio.servico.compra.NuvemIntegracaoCombo;
+ import br.gov.caixa.silce.dominio.servico.compra.NuvemIntegracaoCompra;
+-import br.gov.caixa.silce.negocio.aposta.dao.ApostaCompradaDAOLocal;
+-import br.gov.caixa.silce.negocio.aposta.dao.ApostaDAOLocal;
++import br.gov.caixa.silce.dominio.servico.compra.NuvemIntegracaoReserva;
+ import br.gov.caixa.silce.negocio.apostador.dao.ApostadorDAOLocal;
+-import br.gov.caixa.silce.negocio.aposta.dao.ComboApostaDAOLocal;
+ import br.gov.caixa.silce.negocio.aposta.dao.CompraDAOLocal;
+ import br.gov.caixa.silce.negocio.aposta.dao.CompraFacadeLocal;
+-import br.gov.caixa.silce.negocio.aposta.dao.ReservaCotaBolaoDAOLocal;
+-import br.gov.caixa.silce.negocio.aposta.dao.SituacaoApostaDAOLocal;
+-import br.gov.caixa.silce.negocio.aposta.dao.SituacaoCompraDAOLocal;
+-import br.gov.caixa.silce.negocio.aposta.dao.SituacaoReservaCotaBolaoDAOLocal;
+-import br.gov.caixa.silce.negocio.apostador.dao.LotericaDAOLocal;
+ import br.gov.caixa.silce.negocio.infra.SilceBean;
+-import br.gov.caixa.silce.negocio.integracaocompra.importers.AbstractIntegracaoSynchronizer;
++
+ import br.gov.caixa.silce.negocio.integracaocompra.importers.SyncContext;
+-import br.gov.caixa.silce.negocio.interfaces.local.MantemDadosApostadorLocal;
+-import br.gov.caixa.util.Data;
++import br.gov.caixa.silce.negocio.integracaocompra.importers.AbstractIntegracaoSynchronizer.Mode;
++import br.gov.caixa.silce.negocio.interfaces.local.ControlaIntegracaoCompraLocal;
++import br.gov.caixa.silce.servico.conversor.compra.NuvemIntegracaoCompraConversor;
+ 
+-// import com.google.common.collect.BiMap;
+-// import com.google.common.collect.HashBiMap;
+ 
+ @Stateless
+-public class ControlaIntegracaoCompraBean implements
+-        ControlaIntegracaoCompraLocal,
+-        ControlaIntegracaoCompraRemote,
+-        SilceBean {
++public class ControlaIntegracaoCompraBean implements ControlaIntegracaoCompraLocal, ControlaIntegracaoCompraRemote, SilceBean {
+ 
+-    private static final Logger LOG =
+-        LogManager.getLogger(ControlaIntegracaoCompraBean.class, new MessageFormatMessageFactory());
++    private static final Logger LOG = LogManager.getLogger(ControlaIntegracaoCompraBean.class, new MessageFormatMessageFactory());
+ 
+     @EJB
+     private CompraFacadeLocal compraFacadeLocal;
+ 
+-    @EJB
+-    private MantemDadosApostadorLocal mantemDadosApostadorLocal;
+-
+-    @EJB
+-    private SituacaoCompraDAOLocal situacaoCompraDAO;
+-
+-    @EJB
+-    private SituacaoApostaDAOLocal situacaoApostaDAO;
+-
+     @EJB
+     private CompraDAOLocal compraDAO;
+ 
+-    @EJB
+-    private ApostaDAOLocal apostaDAO;
+-
+     @EJB
+     private ApostadorDAOLocal apostadorDAOLocal;
+ 
+@@ -102,182 +74,118 @@ public class ControlaIntegracaoCompraBean implements
+             if ("CRIACAO".equals(solicitacao.tipoSolicitacao)) {
+                 tratarCriacao(solicitacao);
+             } else if ("ATUALIZACAO".equals(solicitacao.tipoSolicitacao)) {
+-                // tratarAtualizacao(solicitacao);
++                tratarAtualizacao(solicitacao);
+             } else {
+                 throw new IllegalArgumentException("Tipo de solicitacao desconhecido: " + solicitacao.tipoSolicitacao);
+             }
+ 
+         } catch (Exception e) {
+             confirmaIntegracaoErro(solicitacao.compra.idNuvem, e);
++            throw e;
+         }
+     }
+ 
+-    private Apostador recuperarApostador(NuvemIntegracaoApostador apostadorNuvem) {
+-        return apostadorDAOLocal.findByCPF(apostadorNuvem.getParsedCpf());
+-    }
+-
+-    private Data extrairData(Date date) {
+-        return date != null ? new Data(date) : null;
+-    }
+-
+     private void tratarCriacao(MsgNuvemIntegracaoCompraSolicitacao solicitacao) throws Exception {
+         // Apostador apostador = recuperarApostador(solicitacao.apostador); TODO: tratar apostador inexistente
+ 
+-        Compra compraExistente = compraDAO.findByNsuData( solicitacao.compra.nsu, extrairData(solicitacao.compra.dataInicioCompra));
++        Compra compraExistente = compraDAO.findByNsuData(solicitacao.compra.nsu, IntegracaoUtil.extrairData(solicitacao.compra.dataInicioCompra));
+ 
+         if (compraExistente != null) {
+-
+             LOG.info("Compra {0} (nsu {1}) ja existe no legado com id {2}, ignorando.", solicitacao.compra.idNuvem, solicitacao.compra.nsu, compraExistente.getId());
++            confirmaIntegracaoIgnorada(solicitacao.idMensagemSolicitacao, solicitacao.compra.idNuvem, compraExistente.getId(), null, null);
++            return;
++        }
+ 
+-            Map<Long, Long> idsApostasNuvemLegadoMap = new HashMap<>();
+-
+-            for (NuvemIntegracaoAposta apostaNuvem : solicitacao.apostas) {
++        SyncContext context = new SyncContext();
+ 
+-                ApostaComprada apostaCompradaLegado = apostaCompradaDAO.findNuvem(apostaNuvem.comprada.nsu);
++        NuvemIntegracaoCompra compraNuvem = solicitacao.compra;
+ 
+-                if (apostaCompradaLegado == null) {
+-                    throw new IllegalStateException( "Compra já foi integrada e a mensagem seria ignorada, mas nem todas as suas apostas foram. Nada alterado. idApostaNuvem: " + apostaNuvem.idNuvem);
+-                }
++        preparar(solicitacao, Mode.CREATE, context);
++        integrar(solicitacao, Mode.CREATE, context);
+ 
+-                Aposta<?> apostaLegado = apostaCompradaLegado.getAposta();
++        Long idCompraLegado = context.getCache().find(compraNuvem.idNuvem, Compra.class).getId();
++        Map<Long, Long> idsApostasNuvemLegadoMap = context.getIdMap(Aposta.class);
++        Map<Long, Long> idsCombosNuvemLegado = context.getIdMap(ComboAposta.class);
+ 
+-                idsApostasNuvemLegadoMap.put( apostaNuvem.idNuvem, apostaLegado.getId());
+-            }
++        LOG.info("Compra {0}/{1} e suas {2} apostas foram inseridas.", solicitacao.compra.idNuvem, idCompraLegado, idsApostasNuvemLegadoMap.size());
+ 
+-            confirmaIntegracaoIgnorada( solicitacao.idMensagemSolicitacao, solicitacao.compra.idNuvem, compraExistente.getId(), idsApostasNuvemLegadoMap, null);
++        confirmaIntegracaoSucesso(solicitacao.idMensagemSolicitacao, solicitacao.compra.idNuvem, idCompraLegado, idsApostasNuvemLegadoMap, idsCombosNuvemLegado);
++    }
+ 
+-            return;
++    private void tratarAtualizacao(MsgNuvemIntegracaoCompraSolicitacao solicitacao) throws Exception {
++        Compra compra = compraDAO.findById(solicitacao.compra.idLegado);
++    
++        if (compra == null) {
++            throw new IllegalStateException("Compra " + solicitacao.compra.idNuvem + "/" + solicitacao.compra.idLegado + " NÃO existe no legado");
+         }
+ 
+         SyncContext context = new SyncContext();
+ 
+-        NuvemIntegracaoCompra compraNuvem = solicitacao.compra;
+-        List<NuvemIntegracaoAposta> apostasNuvem = solicitacao.apostas;
+-        List<NuvemIntegracaoCombo> combosNuvem = solicitacao.combos;
++        preparar(solicitacao, Mode.UPDATE, context);
++        integrar(solicitacao, Mode.UPDATE, context);
+ 
+-        // BiMap<Long, Long> idsApostasNuvemLegadoMap = HashBiMap.create();
+-        // BiMap<Long, Long> idsCombosNuvemLegado = HashBiMap.create();
++        Long idCompraLegado = compra.getId();
++        Map<Long, Long> idsApostasNuvemLegadoMap = context.getIdMap(Aposta.class);
++        Map<Long, Long> idsCombosNuvemLegado = context.getIdMap(ComboAposta.class);
+ 
+-        Map<Long, Long> idsApostasNuvemLegadoMap = new HashMap<Long, Long>();
+-        Map<Long, Long> idsCombosNuvemLegado = new HashMap<Long, Long>();
+-
+-        preparar(solicitacao, AbstractIntegracaoSynchronizer.Mode.CREATE, context);
+-        integrar(solicitacao, AbstractIntegracaoSynchronizer.Mode.CREATE, context);
+-        LOG.info("Compra {0}/{1} e suas {2} apostas foram inseridas.", solicitacao.compra.idNuvem, compraNuvem.idLegado, idsApostasNuvemLegadoMap.size());
+-
+-        confirmaIntegracaoSucesso( solicitacao.idMensagemSolicitacao, solicitacao.compra.idNuvem, compraNuvem.idLegado, idsApostasNuvemLegadoMap, idsCombosNuvemLegado);
++        confirmaIntegracaoSucesso(solicitacao.idMensagemSolicitacao, solicitacao.compra.idNuvem, idCompraLegado, idsApostasNuvemLegadoMap, idsCombosNuvemLegado);
+     }
+ 
+-    private void preparar( MsgNuvemIntegracaoCompraSolicitacao solicitacao, AbstractIntegracaoSynchronizer.Mode mode, SyncContext context) {
++    private void preparar(MsgNuvemIntegracaoCompraSolicitacao solicitacao, Mode mode, SyncContext context) {
+         NuvemIntegracaoCompra compraNuvem = solicitacao.compra;
+         List<NuvemIntegracaoAposta> apostasNuvem = solicitacao.apostas;
+         List<NuvemIntegracaoCombo> combosNuvem = solicitacao.combos;
+ 
+-        context.getCompraSynchronizer().preSynchronize(compraNuvem, mode);
+-        // for (NuvemIntegracaoAposta apostaNuvem : apostasNuvem) {
+-        //     context.getApostaCompradaSynchronizer().preSynchronize(apostaNuvem.comprada, mode);
+-        //     context.getApostaSynchronizer().preSynchronize(apostaNuvem, mode);
+-        //     if (apostaNuvem.reservaCotaBolao != null) {
+-        //         context.getReservaCotaBolaoSynchronizer()
+-        //             .preSynchronize(apostaNuvem.reservaCotaBolao, mode);
+-        //     }
+-        // }
++        context.getCompraSynchronizer().prepare(compraNuvem, mode);
++        for (NuvemIntegracaoAposta apostaNuvem : apostasNuvem) {
++            context.getApostaCompradaSynchronizer().prepare(apostaNuvem.comprada, mode);
++            context.getApostaSynchronizer().prepare(apostaNuvem, mode);
++            if (apostaNuvem.reservaCotaBolao != null) {
++                context.getReservaCotaBolaoSynchronizer()
++                    .prepare(apostaNuvem.reservaCotaBolao, mode);
++            }
++        }
+ 
+-        // for (NuvemIntegracaoCombo comboNuvem : combosNuvem) {
+-        //     context.getComboSynchronizer().preSynchronize(comboNuvem, mode);
+-        // }
++        for (NuvemIntegracaoCombo comboNuvem : combosNuvem) {
++            context.getComboSynchronizer().prepare(comboNuvem, mode);
++        }
+ 
+         // nota: acredito que, em atualizações, nada seria alterado nos combos. verificar isso.
+     }
+ 
+-    private void integrar(
+-            MsgNuvemIntegracaoCompraSolicitacao solicitacao,
+-            AbstractIntegracaoSynchronizer.Mode mode,
+-            SyncContext context) {
+-
+-        NuvemIntegracaoCompra compraNuvem = solicitacao.compra;
++    private void integrar(MsgNuvemIntegracaoCompraSolicitacao solicitacao, Mode mode, SyncContext context) {
++        List<NuvemIntegracaoAposta> apostasNuvem = solicitacao.apostas;
++        List<NuvemIntegracaoCombo> combosNuvem = solicitacao.combos;
+ 
+-        context.getCompraSynchronizer().synchronize(compraNuvem, mode);
++        context.getCompraSynchronizer().commit();
+ 
+-        // if (mode == AbstractIntegracaoSynchronizer.Mode.CREATE && combosNuvem != null) {
+-        //     for (NuvemIntegracaoCombo comboNuvem : combosNuvem) {
+-        //         context.getComboSynchronizer().synchronize(comboNuvem, mode);
+-        //     }
+-        // }
++        if (mode == Mode.CREATE && combosNuvem != null) {
++            for (NuvemIntegracaoCombo comboNuvem : combosNuvem) {
++                context.getComboSynchronizer().commit();
++            }
++        }
+ 
+-        // for (NuvemIntegracaoAposta apostaNuvem : apostasNuvem) {
+-        //     NuvemIntegracaoReserva reservaNuvem = apostaNuvem.reservaCotaBolao;
+-        //     if (reservaNuvem != null) {
+-        //         context.getReservaCotaBolaoSynchronizer().synchronize(reservaNuvem, mode);
+-        //     }
++        for (NuvemIntegracaoAposta apostaNuvem : apostasNuvem) {
++            NuvemIntegracaoReserva reservaNuvem = apostaNuvem.reservaCotaBolao;
++            if (reservaNuvem != null) {
++                // forçando o flush cedo para contornar o cascade errado do OpenJPA
++                context.getReservaCotaBolaoSynchronizer().commit(true);
++            }
+ 
+-        //     NuvemIntegracaoApostaComprada apostaCompradaNuvem = apostaNuvem.comprada;
++            context.getApostaSynchronizer().commit();
++            context.getApostaCompradaSynchronizer().commit();
++        }
+ 
+-        //     context.getApostaSynchronizer().synchronize(apostaNuvem, mode);
+-        //     context.getApostaCompradaSynchronizer().synchronize(apostaCompradaNuvem, mode);
+-        // }
++        compraDAO.flush();
+     }
+ 
+-
+-
+-    // private void tratarAtualizacao(MsgNuvemIntegracaoCompraSolicitacao solicitacao) throws IllegalStateException {
+-    //     Compra compra = compraDAO.findById(solicitacao.compra.idLegado);
+-    //
+-    //     if (compra == null) {
+-    //         throw new IllegalStateException(
+-    //             "Compra " + solicitacao.compra.idNuvem + "/" + solicitacao.compra.idLegado +
+-    //             " NÃO existe no legado"
+-    //         );
+-    //     }
+-    //
+-    //     atualizarCompraExistente(compra, solicitacao.compra);
+-    //
+-    //     Map<NuvemIntegracaoAposta, Aposta<?>> apostasNuvemLegadoMap =
+-    //         new HashMap<NuvemIntegracaoAposta, Aposta<?>>();
+-    //
+-    //     for (NuvemIntegracaoAposta apostaNuvem : solicitacao.apostas) {
+-    //         Aposta<?> apostaLegado = apostaDAO.findById(apostaNuvem.idLegado);
+-    //
+-    //         if (apostaLegado == null) {
+-    //             throw new IllegalStateException(
+-    //                 "Aposta " + apostaNuvem.idNuvem +
+-    //                 " de compra " + solicitacao.compra.idNuvem + "/" + solicitacao.compra.idLegado +
+-    //                 " NÃO existe no legado"
+-    //             );
+-    //         }
+-    //
+-    //         atualizarApostaExistente(apostaLegado, apostaNuvem);
+-    //         apostasNuvemLegadoMap.put(apostaNuvem, apostaLegado);
+-    //     }
+-    //
+-    //     Map<Long, Long> idsApostasNuvemLegadoMap = new HashMap<Long, Long>();
+-    //
+-    //     for (Map.Entry<NuvemIntegracaoAposta, Aposta<?>> entry : apostasNuvemLegadoMap.entrySet()) {
+-    //         idsApostasNuvemLegadoMap.put(
+-    //             entry.getKey().idNuvem,
+-    //             entry.getValue().getId()
+-    //         );
+-    //     }
+-    //
+-    //     confirmaIntegracaoSucesso(
+-    //         solicitacao.idMensagemSolicitacao,
+-    //         solicitacao.compra.idNuvem,
+-    //         compra.getId(),
+-    //         idsApostasNuvemLegadoMap
+-    //     );
+-    // }
+-
+-    private void confirmaIntegracaoSucesso( Long idSolicitacao, Long idCompraNuvem, Long idCompraLegado, Map<Long, Long> idsApostasNuvemLegado, Map<Long, Long> idsCombosNuvemLegado) {
+-
+-        MsgNuvemIntegracaoCompraConfirmacao msg = new MsgNuvemIntegracaoCompraConfirmacao( idSolicitacao, idCompraNuvem, idCompraLegado, idsApostasNuvemLegado, idsCombosNuvemLegado);
+-
++    private void confirmaIntegracaoSucesso(Long idSolicitacao, Long idCompraNuvem, Long idCompraLegado, Map<Long, Long> idsApostasNuvemLegado, Map<Long, Long> idsCombosNuvemLegado) {
++        MsgNuvemIntegracaoCompraConfirmacao msg = new MsgNuvemIntegracaoCompraConfirmacao(idSolicitacao, idCompraNuvem, idCompraLegado, idsApostasNuvemLegado, idsCombosNuvemLegado);
+         compraFacadeLocal.enviaConfirmacaoIntegracao(msg);
+     }
+ 
+-    private void confirmaIntegracaoIgnorada( Long idSolicitacao, Long idCompraNuvem, Long idCompraLegado, Map<Long, Long> idsApostasNuvemLegado, Map<Long, Long> idsCombosNuvemLegado) {
+-
+-        MsgNuvemIntegracaoCompraConfirmacao msg = new MsgNuvemIntegracaoCompraConfirmacao( idSolicitacao, idCompraNuvem, idCompraLegado, idsApostasNuvemLegado, idsCombosNuvemLegado, true);
+-
++    private void confirmaIntegracaoIgnorada(Long idSolicitacao, Long idCompraNuvem, Long idCompraLegado, Map<Long, Long> idsApostasNuvemLegado, Map<Long, Long> idsCombosNuvemLegado) {
++        MsgNuvemIntegracaoCompraConfirmacao msg = new MsgNuvemIntegracaoCompraConfirmacao(idSolicitacao, idCompraNuvem, idCompraLegado, idsApostasNuvemLegado, idsCombosNuvemLegado, true);
+         compraFacadeLocal.enviaConfirmacaoIntegracao(msg);
+     }
+ 
+@@ -286,7 +194,6 @@ public class ControlaIntegracaoCompraBean implements
+ 
+         // TODO: Implementar lógica de notificação de erro para a nuvem
+ 
+-        LOG.warn("Notificando erro de integracao para a nuvem. IdCompraNuvem: {0}, Erro: {1}",
+-                idSolicitacao, e.toString());
++        LOG.warn("Notificando erro de integracao para a nuvem. IdCompraNuvem: {0}, Erro: {1}", idSolicitacao, e.toString());
+     }
+ }
+diff --git a/silce-liberty-ejb/src/main/java/br/gov/caixa/silce/negocio/integracaocompra/importers/AbstractIdNuvemLegadoSynchronizer.java b/silce-liberty-ejb/src/main/java/br/gov/caixa/silce/negocio/integracaocompra/importers/AbstractIdNuvemLegadoSynchronizer.java
+new file mode 100644
+index 0000000..afa3366
+--- /dev/null
++++ b/silce-liberty-ejb/src/main/java/br/gov/caixa/silce/negocio/integracaocompra/importers/AbstractIdNuvemLegadoSynchronizer.java
+@@ -0,0 +1,25 @@
++package br.gov.caixa.silce.negocio.integracaocompra.importers;
++
++
++import br.gov.caixa.dominio.AbstractEntidade;
++import br.gov.caixa.silce.dominio.servico.compra.IdLegado;
++import br.gov.caixa.silce.dominio.servico.compra.IdNuvem;
++
++
++public abstract class AbstractIdNuvemLegadoSynchronizer<N extends IdNuvem & IdLegado, E extends AbstractEntidade<Long>> extends AbstractIdNuvemSynchronizer<N, E, Long> {
++    
++    @Override
++    protected E prepareUpdate(N nuvem) {
++        E entity = this.dao.findById(nuvem.getIdLegado());
++        // TODO: consertar mensagem de erro de forma a mostrar o tipo da entidade (não do sincronizador)
++        if (entity == null) throw new IllegalStateException("Não foi encontrada a entidade do tipo " + this.getClass().getSimpleName() + " com id legado " + nuvem.getIdLegado());
++        this.mapper.map(nuvem, entity);
++        return entity;
++    }
++
++    @Override
++    protected E fetch(N nuvem) {
++        return this.dao.findById(nuvem.getIdLegado());
++    }
++    
++}
+diff --git a/silce-liberty-ejb/src/main/java/br/gov/caixa/silce/negocio/integracaocompra/importers/AbstractIdNuvemSynchronizer.java b/silce-liberty-ejb/src/main/java/br/gov/caixa/silce/negocio/integracaocompra/importers/AbstractIdNuvemSynchronizer.java
+new file mode 100644
+index 0000000..4d1e350
+--- /dev/null
++++ b/silce-liberty-ejb/src/main/java/br/gov/caixa/silce/negocio/integracaocompra/importers/AbstractIdNuvemSynchronizer.java
+@@ -0,0 +1,20 @@
++package br.gov.caixa.silce.negocio.integracaocompra.importers;
++
++import java.io.Serializable;
++
++import br.gov.caixa.dominio.AbstractEntidade;
++import br.gov.caixa.silce.dominio.servico.compra.IdNuvem;
++
++
++public abstract class AbstractIdNuvemSynchronizer<N extends IdNuvem, E extends AbstractEntidade<I>, I extends Serializable> extends AbstractIntegracaoSynchronizer<N, E, I> {
++
++    @Override
++    protected void cachePreparedEntity(N nuvem, E entity) {
++        getCache().put(nuvem.getIdNuvem(), entity);
++    }
++
++    protected E find(N nuvem) {
++        Long id = nuvem.getIdNuvem();
++        return find(id);
++    }
++}
+diff --git a/silce-liberty-ejb/src/main/java/br/gov/caixa/silce/negocio/integracaocompra/importers/AbstractIntegracaoSynchronizer.java b/silce-liberty-ejb/src/main/java/br/gov/caixa/silce/negocio/integracaocompra/importers/AbstractIntegracaoSynchronizer.java
+index e062c92..94d78ce 100644
+--- a/silce-liberty-ejb/src/main/java/br/gov/caixa/silce/negocio/integracaocompra/importers/AbstractIntegracaoSynchronizer.java
++++ b/silce-liberty-ejb/src/main/java/br/gov/caixa/silce/negocio/integracaocompra/importers/AbstractIntegracaoSynchronizer.java
+@@ -1,7 +1,7 @@
+ package br.gov.caixa.silce.negocio.integracaocompra.importers;
+ 
+ import br.gov.caixa.dominio.AbstractEntidade;
+-import br.gov.caixa.silce.negocio.infra.dao.AbstractSilceDAO;
++import br.gov.caixa.negocio.infra.dao.DAO;
+ import br.gov.caixa.silce.negocio.integracaocompra.mappers.Mapper;
+ import br.gov.caixa.util.GenericsUtil;
+ 
+@@ -13,34 +13,44 @@ import javax.naming.NamingException;
+ import org.apache.logging.log4j.Logger;
+ 
+ import java.io.Serializable;
+-
+-
++import java.util.ArrayList;
++import java.util.List;
++import java.util.Objects;
++
++/**
++ * Representação abstrata de um sincronizador stateful. Cada sincronizador é como estação que trabalha com apenas um dto por vez. Os sincronizadores concretos
++ * implementam sua própria estratégia de sincronização. A sincronização está pensada em duas etapas: 
++ * <ul>
++ *  <li>{@link #prepare(N, Mode) prepare}
++ *  <p>a entidade será materializada e preenchida com os campos escalares do dto nuvem usando o mapper.
++ *  <li>{@link #commit() commit}
++ *  <p>as dependências de outras entidades serão resolvidas e o sql será agendado usando o DAO apropriado
++ * 
++ */
+ public abstract class AbstractIntegracaoSynchronizer<N, E extends AbstractEntidade<I>, I extends Serializable> {
+ 
+-    protected boolean initialized = false;
+-    protected final String INITIALIZATION_ERROR_MSG = "failed to initialize {0}";
+-    protected Logger LOG;
++    protected static final String INITIALIZATION_ERROR_MSG = "failed to initialize {0}";
+ 
+-    protected SyncContext context;
+-
+-    protected AbstractSilceDAO<E, I> dao;
++    protected SyncContext.EntityCache cache;
+ 
++    protected Logger LOG;
++    protected DAO<E, I> dao;
+     protected Mapper<N, E> mapper;
+ 
+-    protected N pendingDto;
+-    protected E pendingAposta;
+-    protected Mode pendingMode;
+-    protected boolean prepared;
++    private WorkerState workerState = WorkerState.IDLE;
+ 
+-    protected AbstractIntegracaoSynchronizer(SyncContext context) {
+-        this.context = context;
+-    }
++    protected N preparedDto;
++    protected E preparedEntity;
++    protected Mode preparedMode;
+ 
+-    public void preSynchronize(N nuvem, Mode mode) {
+ 
+-        if (nuvem == null) {
+-            throw new IllegalStateException("DTO da aposta é null");
+-        }
++    /**
++     * Materializa ou recupera a entidade, pré-popula e coloca no cache compartilhado
++     */
++    public final void prepare(N nuvem, Mode mode) {
++        assertNonNull(nuvem, mode);
++
++        requireState(WorkerState.IDLE);
+ 
+         E entity;
+ 
+@@ -52,110 +62,233 @@ public abstract class AbstractIntegracaoSynchronizer<N, E extends AbstractEntida
+                 entity = prepareUpdate(nuvem);
+                 break;
+             default:
+-                throw new IllegalStateException("modo inválido");
++                throw new IllegalStateException("Modo inválido: " + mode);
+         }
+ 
+-        cache(nuvem, entity);
++        cachePreparedEntity(nuvem, entity);
+ 
+-        this.pendingMode = mode;
+-        this.pendingDto = nuvem;
+-        this.pendingAposta = entity;
+-        this.prepared = true;
+-    }
+-
+-    protected abstract void cache(N nuvem, E entity);
+-
+-    protected SyncContext.EntityCache getCache() {
+-        return this.context.getCache();
+-    }
+-
+-    @SuppressWarnings("unchecked")
+-    protected E find(Long id) {
+-        Class<?> type = GenericsUtil.getDeclaredTypeArgument(this.getClass(), 1);
+-        Class<E> t = (Class<E>) type;
+-        return this.context.getCache().find(id, t);
++        this.preparedDto = nuvem;
++        this.preparedEntity = entity;
++        this.preparedMode = mode;
++        this.workerState = WorkerState.PREPARED;
+     }
+ 
+-    protected E prepareCreate(N nuvem) {
+-        return mapper.map(nuvem);
++    /**
++     * Segunda tarefa do sincronizador:
++     * resolve relações e persiste/atualiza a entidade preparada.
++     */
++    public final E commit() {
++        return commit(false);
+     }
+ 
+-    protected abstract E prepareUpdate(N nuvem);
++    /**
++     * Segunda tarefa do sincronizador:
++     * resolve relações e persiste/atualiza a entidade preparada.
++     * @param flush
++     * força o JPA a enviar os comandos sql imediatamente. Default: false 
++     * @return
++     */
++    public final E commit(boolean flush) {
++        assertNonNull(preparedDto, preparedMode);
+ 
+-    public E synchronize(N nuvem, Mode mode, boolean flush) throws IllegalStateException {
+-
+-        if (!initialized) {
+-            throw new IllegalStateException("one or more DAO services could not be loaded");
+-        }
+-
+-        ensurePrepared();
++        requireState(WorkerState.PREPARED);
+ 
+         try {
+ 
+-            resolveRelations(this.pendingDto, this.pendingAposta);
+-
+             E persisted;
+ 
+-            switch (mode) {
++            switch (preparedMode) {
+                 case CREATE:
+-                    persisted = create(pendingDto);
++                    persisted = create(preparedDto);
+                     break;
+                 case UPDATE:
+-                    persisted = update(pendingDto);
++                    persisted = update(preparedDto);
+                     break;
+                 default:
+-                    throw new IllegalStateException("Modo não suportado: " + this.pendingMode);
++                    throw new IllegalStateException("Modo não suportado: " + preparedMode);
+             }
+ 
+-            if (flush) dao.flush();
++            if (flush) {
++                dao.flush();
++            }
+ 
+             return persisted;
+ 
+         } finally {
+-            clearState();
++            clearWorkbench();
+         }
+     }
+ 
+-    public E synchronize(N nuvem, Mode mode) throws IllegalStateException {
+-        return synchronize(nuvem, mode, true);
++    public final boolean isIdle() {
++        return workerState == WorkerState.IDLE;
++    }
++
++    protected final N getPreparedDto() {
++        ensurePrepared();
++        return preparedDto;
++    }
++
++    protected final E getPreparedEntity() {
++        ensurePrepared();
++        return preparedEntity;
++    }
++
++    protected final Mode getPreparedMode() {
++        ensurePrepared();
++        return preparedMode;
+     }
+ 
++    protected abstract void cachePreparedEntity(N nuvem, E entity);
++
++    protected SyncContext.EntityCache getCache() {
++        return cache;
++    }
++
++    @SuppressWarnings("unchecked")
++    protected E find(Long id) {
++        Class<?> type = GenericsUtil.getDeclaredTypeArgument(this.getClass(), 1);
++        Class<E> t = (Class<E>) type;
++        return cache.find(id, t);
++    }
++
++    /**
++     * Busca a entidade. Implementações estão livres para decidir como fazer a busca.
++     * @param nuvem
++     * @return
++     */
++    protected abstract E fetch(N nuvem);
++
++    /**
++     * Preparação para criação da entidade
++     * @param nuvem
++     * @return
++     */
++    protected E prepareCreate(N nuvem) {
++        E entity = mapper.map(nuvem);
++        // cachePreparedEntity(nuvem, entity);
++        return entity;
++    }
++
++    /**
++     * Preparação para atualização de entidade
++     * @param nuvem
++     * @return
++     */
++    protected E prepareUpdate(N nuvem) {
++        E entity = fetch(nuvem);
++        mapper.map(nuvem, entity);
++        return entity;
++    }
++    
++    /**
++     * Estratégia de criação da entidade. Ao final do método, a entidade deve estar persistida, no mínimo, localmente, ou seja, é garantido que estará no contexto
++     * de persistência da transação.
++     * @param nuvem
++     * @return
++     */
+     protected abstract E create(N nuvem);
+ 
++    /**
++     * Estratégia de atualização da entidade.
++     * @param nuvem
++     * @return
++     */
+     protected abstract E update(N nuvem);
+ 
+-    protected abstract void resolveRelations(N nuvem, E entidade);
++    /**
++     * Resolve as relações da entidade em questão com as outras entidades do grafo
++     * @param nuvem
++     * @param entidade
++     */
++    protected abstract void resolve(N nuvem, E entidade);
+ 
+-    protected void ensurePrepared() {
+-        if (!prepared || pendingDto == null || pendingAposta == null) {
+-            throw new IllegalStateException(
+-                "preSynchronize() deve ser chamado antes de synchronize()");
++    protected <T> T getDao(Class<T> localInterface) throws NamingException {
++        Context ctx = new InitialContext();
++        NamingException lastException = null;
++
++        for (String lookupString : buildLookupNames(localInterface)) {
++            try {
++                Object result = ctx.lookup(lookupString);
++                return localInterface.cast(result);
++            } catch (NamingException e) {
++                lastException = e;
++            }
+         }
+-    }
+ 
+-    private void clearState() {
+-        this.pendingDto = null;
+-        this.pendingAposta = null;
+-        this.pendingMode = null;
+-        this.prepared = false;
++        throw lastException != null
++            ? lastException
++            : new NamingException("Nenhum lookup JNDI encontrado para " + localInterface.getName());
+     }
+ 
+-    protected <DAO extends AbstractSilceDAO<?, ?>> DAO getDao(Class<DAO> clazz) throws NamingException {
+-        String lookupString = "ejblocal:" + clazz.getName();
+-        Context ctx = new InitialContext();
+-        Object result = ctx.lookup(lookupString);
+-        return clazz.cast(result);
++    private <T> List<String> buildLookupNames(Class<T> localInterface) {
++        List<String> lookupNames = new ArrayList<String>();
++        String beanName = localInterface.getSimpleName().replaceFirst("Local$", "");
++        String interfaceName = localInterface.getName();
++        String beanClassName = interfaceName.replaceFirst("Local$", "");
++
++        lookupNames.add("java:module/" + beanName + "!" + interfaceName);
++        lookupNames.add("java:app/silce-liberty-ejb-1.0-SNAPSHOT/" + beanName + "!" + interfaceName);
++        lookupNames.add("java:global/silce-liberty-ear-1.0-SNAPSHOT/silce-liberty-ejb-1.0-SNAPSHOT/" + beanName + "!" + interfaceName);
++        lookupNames.add("ejblocal:" + beanClassName);
++        return lookupNames;
+     }
+ 
+     protected void logInitError(Throwable e) {
+         LOG.error(INITIALIZATION_ERROR_MSG, getClass().getSimpleName(), e);
+     }
+ 
++    protected final void ensurePrepared() {
++        if (workerState != WorkerState.PREPARED
++                || preparedDto == null
++                || preparedEntity == null
++                || preparedMode == null) {
++            throw new IllegalStateException(
++                    "O sincronizador não possui item preparado na bancada.");
++        }
++    }
++
++    private void requireState(WorkerState expected) {
++        if (workerState != expected) {
++            throw new IllegalStateException(
++                    "Estado inválido do sincronizador. Esperado: " + expected + ", atual: " + workerState);
++        }
++    }
++
++    private void assertNonNull(N nuvem, Mode mode) {
++        Objects.requireNonNull(nuvem);
++        Objects.requireNonNull(mode);
++    }
++
++    // private void assertNonNull(N nuvem, Mode mode) {
++    //     Objects.requireNonNull(nuvem, "")
++    // }
++
++    // private Supplier<String> msg(String m) {
++    //     return new Supplier<String>() {
++    //         @Override
++    //         public String get() {
++    //             return m;
++    //         }
++    //     };
++    // }
++
++    private void clearWorkbench() {
++        this.preparedDto = null;
++        this.preparedEntity = null;
++        this.preparedMode = null;
++        this.workerState = WorkerState.IDLE;
++    }
++
++    protected enum WorkerState {
++        IDLE,
++        PREPARED
++    }
++
+     public static enum Mode {
+         CREATE(0),
+         UPDATE(1);
+ 
+-        int mode;
++        private final int mode;
+ 
+         private Mode(int mode) {
+             this.mode = mode;
+diff --git a/silce-liberty-ejb/src/main/java/br/gov/caixa/silce/negocio/integracaocompra/importers/ApostaCompradaSynchronizer.java b/silce-liberty-ejb/src/main/java/br/gov/caixa/silce/negocio/integracaocompra/importers/ApostaCompradaSynchronizer.java
+index 6697997..697fef5 100644
+--- a/silce-liberty-ejb/src/main/java/br/gov/caixa/silce/negocio/integracaocompra/importers/ApostaCompradaSynchronizer.java
++++ b/silce-liberty-ejb/src/main/java/br/gov/caixa/silce/negocio/integracaocompra/importers/ApostaCompradaSynchronizer.java
+@@ -5,30 +5,30 @@ import javax.naming.NamingException;
+ import br.gov.caixa.silce.dominio.entidade.Aposta;
+ import br.gov.caixa.silce.dominio.entidade.ApostaComprada;
+ import br.gov.caixa.silce.dominio.servico.compra.NuvemIntegracaoApostaComprada;
+-import br.gov.caixa.silce.negocio.aposta.dao.ApostaCompradaDAO;
+-import br.gov.caixa.silce.negocio.aposta.dao.ApostaDAO;
+-import br.gov.caixa.silce.negocio.aposta.dao.SituacaoApostaDAO;
++import br.gov.caixa.silce.negocio.aposta.dao.ApostaCompradaDAOLocal;
++import br.gov.caixa.silce.negocio.aposta.dao.ApostaDAOLocal;
++import br.gov.caixa.silce.negocio.aposta.dao.SituacaoApostaDAOLocal;
++import br.gov.caixa.silce.negocio.integracaocompra.mappers.ApostaCompradaMapper;
+ 
+ public class ApostaCompradaSynchronizer extends AbstractIntegracaoSynchronizer<NuvemIntegracaoApostaComprada, ApostaComprada, Long> {
+ 
+-    ApostaDAO apostaDAO;
+-    ApostaCompradaDAO apostaCompradaDAO;
+-    SituacaoApostaDAO situacaoApostaDAO;
+-
+-    public ApostaCompradaSynchronizer(SyncContext context) {
+-        super(context);
+-        try {
+-            this.apostaDAO = getDao(ApostaDAO.class);
+-            this.apostaCompradaDAO = getDao(ApostaCompradaDAO.class);
+-            this.situacaoApostaDAO = getDao(SituacaoApostaDAO.class);
+-        } catch (NamingException e) {
+-            logInitError(e);
+-        }
++    ApostaDAOLocal apostaDAO;
++    ApostaCompradaDAOLocal apostaCompradaDAO;
++    SituacaoApostaDAOLocal situacaoApostaDAO;
++
++    public ApostaCompradaSynchronizer(SyncContext.EntityCache cache) throws NamingException {
++        this.apostaDAO = getDao(ApostaDAOLocal.class);
++        this.apostaCompradaDAO = getDao(ApostaCompradaDAOLocal.class);
++        this.situacaoApostaDAO = getDao(SituacaoApostaDAOLocal.class);
++        this.dao = apostaCompradaDAO;
++        this.cache = cache;
++        this.mapper = new ApostaCompradaMapper();
+     }
+ 
+     @Override
+-    protected void cache(NuvemIntegracaoApostaComprada nuvem, ApostaComprada entity) {
+-        this.context.getCache().put(nuvem.aposta.getIdNuvem(), entity);
++    protected void cachePreparedEntity(NuvemIntegracaoApostaComprada nuvem, ApostaComprada entity) {
++        // cacheando pelo id nuvem da aposta, uma vez que não temos id's no dto nuvem da aposta comprada. Isso não gera ambiguidade porque a chave é composta.
++        getCache().put(nuvem.aposta.getIdNuvem(), entity);
+     }
+ 
+     protected ApostaComprada find(NuvemIntegracaoApostaComprada nuvem) {
+@@ -37,55 +37,41 @@ public class ApostaCompradaSynchronizer extends AbstractIntegracaoSynchronizer<N
+     }
+ 
+     @Override
+-    protected ApostaComprada prepareUpdate(NuvemIntegracaoApostaComprada nuvem) {
+-        ApostaComprada entity = apostaCompradaDAO.findNuvem(nuvem.nsu);
+-        mapper.map(nuvem, entity);
+-        return entity;
++    protected ApostaComprada fetch(NuvemIntegracaoApostaComprada nuvem) {
++        return apostaCompradaDAO.findNuvem(nuvem.nsu);
+     }
+ 
+     @Override
+     protected ApostaComprada create(NuvemIntegracaoApostaComprada nuvem) {
+         ApostaComprada apostaComprada = find(nuvem);
+-        resolveRelations(nuvem, apostaComprada);
++        resolve(nuvem, apostaComprada);
+         apostaCompradaDAO.insert(apostaComprada);
+         return apostaComprada;
+     }
+ 
+     @Override
+     protected ApostaComprada update(NuvemIntegracaoApostaComprada nuvem) {
+-
+         ApostaComprada apostaComprada = find(nuvem);
+-
+         Long idLegadoAposta = nuvem.aposta.idLegado;
+-
+         if (idLegadoAposta == null) {
+             throw new IllegalStateException("id legado da aposta é null");
+         }
+-
+-        resolveRelations(nuvem, apostaComprada);
+-
++        resolve(nuvem, apostaComprada);
+         apostaCompradaDAO.insert(apostaComprada);
+-
+         return apostaComprada;
+     }
+ 
+     @Override
+-    protected void resolveRelations(NuvemIntegracaoApostaComprada nuvem, ApostaComprada entity) {
++    protected void resolve(NuvemIntegracaoApostaComprada nuvem, ApostaComprada entity) {
+ 
+         if (nuvem.aposta == null) {
+             throw new IllegalStateException("Não há aposta associada a essa aposta comprada");
+         }
+ 
+-        Long idAposta = nuvem.aposta.idLegado;
+-
+-        if (idAposta == null) {
+-            throw new IllegalStateException("Nenhum id legado associado à compra");
+-        }
+-
+-        Aposta<?> aposta = apostaDAO.findById(idAposta);
++        Aposta<?> aposta = getCache().find(nuvem.aposta.idNuvem, Aposta.class);
+ 
+         if (aposta == null) {
+-            throw new IllegalStateException("Nenhuma aposta encontrada para o id " + idAposta);
++            throw new IllegalStateException("Nenhuma aposta encontrada para o id " + nuvem.aposta.idNuvem);
+         }
+ 
+         entity.setAposta(aposta);
+diff --git a/silce-liberty-ejb/src/main/java/br/gov/caixa/silce/negocio/integracaocompra/importers/ApostaSynchronizer.java b/silce-liberty-ejb/src/main/java/br/gov/caixa/silce/negocio/integracaocompra/importers/ApostaSynchronizer.java
+index 8f236c4..398cc84 100644
+--- a/silce-liberty-ejb/src/main/java/br/gov/caixa/silce/negocio/integracaocompra/importers/ApostaSynchronizer.java
++++ b/silce-liberty-ejb/src/main/java/br/gov/caixa/silce/negocio/integracaocompra/importers/ApostaSynchronizer.java
+@@ -12,88 +12,52 @@ import br.gov.caixa.silce.dominio.entidade.ComboAposta;
+ import br.gov.caixa.silce.dominio.entidade.Compra;
+ import br.gov.caixa.silce.dominio.entidade.ReservaCotaBolao;
+ import br.gov.caixa.silce.dominio.servico.compra.NuvemIntegracaoAposta;
+-import br.gov.caixa.silce.negocio.aposta.dao.ApostaDAO;
+-import br.gov.caixa.silce.negocio.aposta.dao.ComboApostaDAO;
+-import br.gov.caixa.silce.negocio.aposta.dao.CompraDAO;
+-import br.gov.caixa.silce.negocio.aposta.dao.ReservaCotaBolaoDAO;
+-
+-public class ApostaSynchronizer extends IntegracaoSynchronizer<NuvemIntegracaoAposta, Aposta<?>, Long> {
+-
+-    private static final Logger LOG =
+-        LogManager.getLogger(ApostaSynchronizer.class, new MessageFormatMessageFactory());
+-
+-    private ComboApostaDAO comboApostaDAO;
+-    private CompraDAO compraDAO;
+-    private ApostaDAO apostaDAO;
+-    private ReservaCotaBolaoDAO reservaCotaBolaoDAO;
+-
+-    public ApostaSynchronizer(SyncContext context) {
+-        super(context);
+-        try {
+-            this.comboApostaDAO = getDao(ComboApostaDAO.class);
+-            this.compraDAO = getDao(CompraDAO.class);
+-            this.apostaDAO = getDao(ApostaDAO.class);
+-            this.reservaCotaBolaoDAO = getDao(ReservaCotaBolaoDAO.class);
+-        } catch (NamingException e) {
+-            logInitError(e);
+-        }
+-    }
+-
+-    @Override
+-    protected Aposta<?> prepareUpdate(NuvemIntegracaoAposta apostaNuvem) {
+-        Aposta<?> entity = dao.findById(apostaNuvem.idLegado);
+-        mapper.map(apostaNuvem, entity);
+-        return entity;
++import br.gov.caixa.silce.negocio.aposta.dao.ApostaDAOLocal;
++import br.gov.caixa.silce.negocio.aposta.dao.ComboApostaDAOLocal;
++import br.gov.caixa.silce.negocio.aposta.dao.CompraDAOLocal;
++import br.gov.caixa.silce.negocio.aposta.dao.ReservaCotaBolaoDAOLocal;
++import br.gov.caixa.silce.negocio.integracaocompra.mappers.ApostaMapper;
++
++public class ApostaSynchronizer extends AbstractIdNuvemLegadoSynchronizer<NuvemIntegracaoAposta, Aposta<?>> {
++
++    private static final Logger LOG = LogManager.getLogger(ApostaSynchronizer.class, new MessageFormatMessageFactory());
++
++    private ComboApostaDAOLocal comboApostaDAO;
++    private CompraDAOLocal compraDAO;
++    private ApostaDAOLocal apostaDAO;
++    private ReservaCotaBolaoDAOLocal reservaCotaBolaoDAO;
++
++    public ApostaSynchronizer(SyncContext.EntityCache cache) throws NamingException {
++        // super(cache);
++        this.cache = cache;
++        this.comboApostaDAO = getDao(ComboApostaDAOLocal.class);
++        this.compraDAO = getDao(CompraDAOLocal.class);
++        this.apostaDAO = getDao(ApostaDAOLocal.class);
++        this.reservaCotaBolaoDAO = getDao(ReservaCotaBolaoDAOLocal.class);
++        this.dao = apostaDAO;
++        this.mapper = new ApostaMapper();
+     }
+ 
+     @Override
+     protected Aposta<?> create(NuvemIntegracaoAposta apostaNuvem) {
+-
+-        Aposta<?> aposta =
+-            this.context.getCache().find(apostaNuvem.idNuvem, Aposta.class);
+-
+-        resolveRelations(apostaNuvem, aposta);
+-
+-        if (aposta instanceof AbstractApostaNumerica) {
+-            AbstractApostaNumerica apostaNumerica = (AbstractApostaNumerica) aposta;
+-            apostaNumerica.setQuantidadeTeimosinhas(apostaNuvem.qtdTeimosinhas);
+-        }
+-
+-        aposta.setApostaOriginalLotomania(null);
+-        aposta.setComboAposta(null);
+-
++        Aposta<?> aposta = getCache().find(apostaNuvem.idNuvem, Aposta.class);
++        resolve(apostaNuvem, aposta);
+         apostaDAO.insert(aposta);
+-
+         return aposta;
+     }
+ 
+     @Override
+     protected Aposta<?> update(NuvemIntegracaoAposta apostaNuvem) {
+-
+         Long idLegadoAposta = apostaNuvem.idLegado;
+-
+         if (idLegadoAposta == null) {
+             throw new IllegalStateException("id legado da aposta é null");
+         }
+-
+-        Aposta<?> aposta =
+-            this.context.getCache().find(apostaNuvem.idNuvem, Aposta.class);
+-
++        Aposta<?> aposta = getCache().find(apostaNuvem.idNuvem, Aposta.class);
+         if (aposta == null) {
+             throw new IllegalStateException("Nenhuma aposta encontrada para o id " + idLegadoAposta);
+         }
+-
+-        if (apostaNuvem.reservaCotaBolao != null) {
+-            ReservaCotaBolao reserva =
+-                this.context.getCache().find(
+-                    apostaNuvem.reservaCotaBolao.idNuvem,
+-                    ReservaCotaBolao.class);
+-
+-            aposta.setReservaCotaBolao(reserva);
+-        }
+-
++        resolve(apostaNuvem, aposta);
+         Aposta<?> x = apostaDAO.update(aposta);
+-
+         if (x != aposta) {
+             throw new IllegalStateException("entidade aposta retornada não é a mesma do cache");
+         }
+@@ -102,72 +66,53 @@ public class ApostaSynchronizer extends IntegracaoSynchronizer<NuvemIntegracaoAp
+     }
+ 
+     @Override
+-    protected void resolveRelations(NuvemIntegracaoAposta apostaNuvem, Aposta<?> aposta) {
++    protected void resolve(NuvemIntegracaoAposta apostaNuvem, Aposta<?> aposta) {
+         resolveCompra(apostaNuvem, aposta);
+         resolveCombo(apostaNuvem, aposta);
+-        resolveReservaCotaBolao(apostaNuvem, aposta);
++        if (apostaNuvem.reservaCotaBolao != null) {
++            resolveReservaCotaBolao(apostaNuvem, aposta);
++        }
+ 
+         Compra compra = aposta.getCompra();
+         aposta.setParticao(compra.getParticao());
+         aposta.setMes(compra.getMes());
++
++        if (aposta instanceof AbstractApostaNumerica) {
++            AbstractApostaNumerica apostaNumerica = (AbstractApostaNumerica) aposta;
++            apostaNumerica.setQuantidadeTeimosinhas(apostaNuvem.qtdTeimosinhas);
++        }
++
++        aposta.setApostaOriginalLotomania(null);
++        aposta.setComboAposta(null);
+     }
+ 
+     private void resolveCompra(NuvemIntegracaoAposta apostaNuvem, Aposta<?> aposta) {
+-
+         if (apostaNuvem.compra == null) {
+             throw new IllegalStateException("Não há compra associada a essa aposta");
+         }
+-
+-        Long idCompra = apostaNuvem.compra.idLegado;
+-
+-        if (idCompra == null) {
+-            throw new IllegalStateException("Nenhum id legado associado à compra");
+-        }
+-
+         Long idCompraNuvem = apostaNuvem.compra.getIdNuvem();
+-
+-        Compra compra = this.context.getCache().find(idCompraNuvem, Compra.class);
+-
++        Compra compra = getCache().find(idCompraNuvem, Compra.class);
+         if (compra == null) {
+             throw new IllegalStateException("Nenhuma compra encontrada no cache para o id " + idCompraNuvem);
+         }
+-
+         aposta.setCompra(compra);
+     }
+ 
+     private void resolveCombo(NuvemIntegracaoAposta apostaNuvem, Aposta<?> aposta) {
+-
+         if (apostaNuvem.idNuvemCombo == null) return;
+-
+-        ComboAposta combo =
+-            this.context.getCache().find(apostaNuvem.idNuvemCombo, ComboAposta.class);
+-
++        ComboAposta combo = getCache().find(apostaNuvem.idNuvemCombo, ComboAposta.class);
+         if (combo == null) {
+             throw new IllegalStateException(
+                 "Nenhum combo encontrado no cache para o id " + apostaNuvem.idNuvemCombo);
+         }
+-
+         aposta.setComboAposta(combo);
+     }
+ 
+     private void resolveReservaCotaBolao(NuvemIntegracaoAposta apostaNuvem, Aposta<?> aposta) {
+-
+-        if (apostaNuvem.reservaCotaBolao == null) {
+-            aposta.setReservaCotaBolao(null);
+-            return;
+-        }
+-
+-        ReservaCotaBolao reserva =
+-            this.context.getCache().find(
+-                apostaNuvem.reservaCotaBolao.idNuvem,
+-                ReservaCotaBolao.class);
+-
++        ReservaCotaBolao reserva = getCache().find(apostaNuvem.reservaCotaBolao.idNuvem, ReservaCotaBolao.class);
+         if (reserva == null) {
+-            throw new IllegalStateException(
+-                "Nenhuma reserva de cota bolao encontrada no cache para o id "
+-                    + apostaNuvem.reservaCotaBolao.idNuvem);
++            throw new IllegalStateException("Nenhuma reserva de cota bolao encontrada no cache para o id " + apostaNuvem.reservaCotaBolao.idNuvem);
+         }
+-
+         aposta.setReservaCotaBolao(reserva);
+     }
+ }
+diff --git a/silce-liberty-ejb/src/main/java/br/gov/caixa/silce/negocio/integracaocompra/importers/ComboApostaSynchronizer.java b/silce-liberty-ejb/src/main/java/br/gov/caixa/silce/negocio/integracaocompra/importers/ComboApostaSynchronizer.java
+index cbcbff7..aca676c 100644
+--- a/silce-liberty-ejb/src/main/java/br/gov/caixa/silce/negocio/integracaocompra/importers/ComboApostaSynchronizer.java
++++ b/silce-liberty-ejb/src/main/java/br/gov/caixa/silce/negocio/integracaocompra/importers/ComboApostaSynchronizer.java
+@@ -3,22 +3,25 @@ package br.gov.caixa.silce.negocio.integracaocompra.importers;
+ import javax.naming.NamingException;
+ 
+ import br.gov.caixa.silce.dominio.entidade.ComboAposta;
++import br.gov.caixa.silce.dominio.entidade.TipoCombo;
+ import br.gov.caixa.silce.dominio.servico.compra.NuvemIntegracaoCombo;
+-import br.gov.caixa.silce.negocio.aposta.dao.ComboApostaDAO;
++import br.gov.caixa.silce.negocio.aposta.dao.ComboApostaDAOLocal;
++import br.gov.caixa.silce.negocio.aposta.dao.TipoComboDAOLocal;
+ import br.gov.caixa.silce.negocio.integracaocompra.IntegracaoUtil;
++import br.gov.caixa.silce.negocio.integracaocompra.mappers.ComboApostaMapper;
+ 
+ 
+-public class ComboApostaSynchronizer extends IntegracaoSynchronizer<NuvemIntegracaoCombo, ComboAposta, Long> {
++public class ComboApostaSynchronizer extends AbstractIdNuvemLegadoSynchronizer<NuvemIntegracaoCombo, ComboAposta> {
+ 
+-    private ComboApostaDAO comboApostaDAO;
++    private ComboApostaDAOLocal comboApostaDAO;
++    private TipoComboDAOLocal tipoComboDAO;
+ 
+-    public ComboApostaSynchronizer(SyncContext context) {
+-        super(context);
+-        try {
+-            this.comboApostaDAO = getDao(ComboApostaDAO.class);
+-        } catch (NamingException e) {
+-            logInitError(e);
+-        }
++    public ComboApostaSynchronizer(SyncContext.EntityCache cache) throws NamingException {
++        this.comboApostaDAO = getDao(ComboApostaDAOLocal.class);
++        this.tipoComboDAO = getDao(TipoComboDAOLocal.class);
++        this.dao = comboApostaDAO;
++        this.cache = cache;
++        this.mapper = new ComboApostaMapper();
+     }
+ 
+     @Override
+@@ -32,11 +35,12 @@ public class ComboApostaSynchronizer extends IntegracaoSynchronizer<NuvemIntegra
+     protected ComboAposta update(NuvemIntegracaoCombo comboNuvem) {
+         Long idLegadoCombo = comboNuvem.getIdLegado();
+         if (idLegadoCombo == null) throw new IllegalStateException("id legado do combo é null");
+-        ComboAposta combo = this.context.getCache().find(comboNuvem.getIdNuvem(), ComboAposta.class);
++        ComboAposta combo = getCache().find(comboNuvem.getIdNuvem(), ComboAposta.class);
+         if (combo == null) {
+             throw new IllegalStateException("Nenhuma aposta encontrada para o id " + idLegadoCombo);
+         }
+         if (comboNuvem.idLegado == null) throw new IllegalStateException("id legado do combo é null");
++        resolve(comboNuvem, combo);
+         ComboAposta x = comboApostaDAO.update(combo);
+         if (x != combo) throw new IllegalStateException("entidade combo retornada não é a mesma do cache");
+         return combo;
+@@ -45,19 +49,25 @@ public class ComboApostaSynchronizer extends IntegracaoSynchronizer<NuvemIntegra
+     @Override
+     protected ComboAposta create(NuvemIntegracaoCombo comboNuvem) {
+ 
+-        ComboAposta combo = this.context.getCache().find(comboNuvem.getIdNuvem(), ComboAposta.class);
++        ComboAposta combo = getCache().find(comboNuvem.getIdNuvem(), ComboAposta.class);
+ 
+-        resolveRelations(comboNuvem, combo);
++        resolve(comboNuvem, combo);
+ 
+         combo.setMes((long) IntegracaoUtil.getMesAtual());
+         combo.setParticao((long) IntegracaoUtil.getParticao(comboNuvem.getIdNuvem()));
+-        // obs: o campo de data é transiente e, at[e onde investiguei, nem sequer [e preenchido no fluxo atual do carrinho nuvem
++        // obs: o campo de data é transiente e, até onde investiguei, nem sequer é preenchido no fluxo atual do carrinho nuvem
+         // combo.setDataInclusao(new Data(new Date())).toString(); // TODO: melhorar essa aberração. criar o campo na nuvem?
++        combo.setTipoCombo(comboNuvem.tipoCombo);
+         comboApostaDAO.insert(combo);
+-        this.context.getCache().put(comboNuvem.getIdNuvem(), combo);
+         return combo;
+     }
+ 
+     @Override
+-    protected void resolveRelations(NuvemIntegracaoCombo comboNuvem, ComboAposta combo) {}
++    protected void resolve(NuvemIntegracaoCombo comboNuvem, ComboAposta combo) {
++        combo.setTipoCombo(recuperarTipoCombo(1L));
++    }
++
++    private TipoCombo recuperarTipoCombo(Long tipoCombo) {
++        return tipoComboDAO.findById(tipoCombo);
++    }
+ }
+diff --git a/silce-liberty-ejb/src/main/java/br/gov/caixa/silce/negocio/integracaocompra/importers/CompraSynchronizer.java b/silce-liberty-ejb/src/main/java/br/gov/caixa/silce/negocio/integracaocompra/importers/CompraSynchronizer.java
+index 30e0e85..7fc7409 100644
+--- a/silce-liberty-ejb/src/main/java/br/gov/caixa/silce/negocio/integracaocompra/importers/CompraSynchronizer.java
++++ b/silce-liberty-ejb/src/main/java/br/gov/caixa/silce/negocio/integracaocompra/importers/CompraSynchronizer.java
+@@ -13,77 +13,56 @@ import br.gov.caixa.silce.dominio.entidade.SituacaoCompra;
+ import br.gov.caixa.silce.dominio.servico.compra.NuvemIntegracaoApostador;
+ import br.gov.caixa.silce.dominio.servico.compra.NuvemIntegracaoCompra;
+ import br.gov.caixa.silce.dominio.servico.compra.NuvemIntegracaoLoterica;
+-import br.gov.caixa.silce.negocio.apostador.dao.ApostadorDAO;
+-import br.gov.caixa.silce.negocio.aposta.dao.CompraDAO;
+-import br.gov.caixa.silce.negocio.aposta.dao.SituacaoCompraDAO;
+-import br.gov.caixa.silce.negocio.apostador.dao.LotericaDAO;
+-
+-
+-public class CompraSynchronizer
+-        extends IntegracaoSynchronizer<NuvemIntegracaoCompra, Compra, Long> {
+-
+-    private static final Logger LOG =
+-        LogManager.getLogger(CompraSynchronizer.class, new MessageFormatMessageFactory());
+-
+-    ApostadorDAO apostadorDAO;
+-    CompraDAO compraDAO;
+-    SituacaoCompraDAO situacaoCompraDAO;
+-    LotericaDAO lotericaDAO;
+-
+-    public CompraSynchronizer(SyncContext context) {
+-        super(context);
+-        try {
+-            apostadorDAO = getDao(ApostadorDAO.class);
+-            compraDAO = getDao(CompraDAO.class);
+-            situacaoCompraDAO = getDao(SituacaoCompraDAO.class);
+-            lotericaDAO = getDao(LotericaDAO.class);
+-        } catch (NamingException e) {
+-            logInitError(e);
+-        }
+-    }
+-
+-    @Override
+-    protected Compra prepareUpdate(NuvemIntegracaoCompra compraNuvem) {
+-        Compra entity = dao.findById(compraNuvem.getIdLegado());
+-        mapper.map(compraNuvem, entity);
+-        return entity;
++import br.gov.caixa.silce.negocio.apostador.dao.ApostadorDAOLocal;
++import br.gov.caixa.silce.negocio.aposta.dao.CompraDAOLocal;
++import br.gov.caixa.silce.negocio.aposta.dao.SituacaoCompraDAOLocal;
++import br.gov.caixa.silce.negocio.apostador.dao.LotericaDAOLocal;
++import br.gov.caixa.silce.negocio.integracaocompra.mappers.CompraMapper;
++
++
++public class CompraSynchronizer extends AbstractIdNuvemLegadoSynchronizer<NuvemIntegracaoCompra, Compra> {
++
++    private static final Logger LOG = LogManager.getLogger(CompraSynchronizer.class, new MessageFormatMessageFactory());
++
++    ApostadorDAOLocal apostadorDAO;
++    CompraDAOLocal compraDAO;
++    SituacaoCompraDAOLocal situacaoCompraDAO;
++    LotericaDAOLocal lotericaDAO;
++
++    public CompraSynchronizer(SyncContext.EntityCache cache) throws NamingException {
++        apostadorDAO = getDao(ApostadorDAOLocal.class);
++        compraDAO = getDao(CompraDAOLocal.class);
++        situacaoCompraDAO = getDao(SituacaoCompraDAOLocal.class);
++        lotericaDAO = getDao(LotericaDAOLocal.class);
++        this.dao = compraDAO;
++        this.cache = cache;
++        this.mapper = new CompraMapper();
+     }
+ 
+     @Override
+     protected Compra create(NuvemIntegracaoCompra compraNuvem) {
+-
+-        Compra compra =
+-            this.context.getCache().find(compraNuvem.idNuvem, Compra.class);
+-
++        Compra compra = getCache().find(compraNuvem.idNuvem, Compra.class);
+         compra.setCompraIntegrada(true);
+-
+-        resolveRelations(compraNuvem, compra);
+-
++        resolve(compraNuvem, compra);
+         compraDAO.insert(compra);
+-
+-        this.context.getCache().put(compraNuvem.idNuvem, compra);
+-
+         return compra;
+     }
+ 
+     @Override
+     protected Compra update(NuvemIntegracaoCompra compraNuvem) {
+-        Long idLegadoCompra = compraNuvem.getIdLegado();
+-
+         if (compraNuvem.getIdLegado() == null) {
+             throw new IllegalStateException("id legado da aposta é null");
+         }
+         Long idCompra = compraNuvem.getIdNuvem();
+-        // Compra compra = compraDAO.findById(compra.idLegado);
+-        Compra compra = this.context.getCache().find(idCompra, Compra.class);
+-        resolveRelations(compraNuvem, compra);
++        Compra compra = getCache().find(idCompra, Compra.class);
++        resolve(compraNuvem, compra);
+         Compra x = compraDAO.update(compra);
+         if (compra != x) throw new IllegalStateException("entidade retornada não é a mesma do cache");
+         return compra;
+     }
+ 
+     @Override
+-    protected void resolveRelations(NuvemIntegracaoCompra compraNuvem, Compra compra) {
++    protected void resolve(NuvemIntegracaoCompra compraNuvem, Compra compra) {
+         Apostador apostador = recuperarApostador(compraNuvem.apostador);
+         compra.setApostador(apostador);
+         compra.setCompraIntegrada(true);
+diff --git a/silce-liberty-ejb/src/main/java/br/gov/caixa/silce/negocio/integracaocompra/importers/IntegracaoSynchronizer.java b/silce-liberty-ejb/src/main/java/br/gov/caixa/silce/negocio/integracaocompra/importers/IntegracaoSynchronizer.java
+deleted file mode 100644
+index be91ba4..0000000
+--- a/silce-liberty-ejb/src/main/java/br/gov/caixa/silce/negocio/integracaocompra/importers/IntegracaoSynchronizer.java
++++ /dev/null
+@@ -1,24 +0,0 @@
+-package br.gov.caixa.silce.negocio.integracaocompra.importers;
+-
+-import java.io.Serializable;
+-
+-import br.gov.caixa.dominio.AbstractEntidade;
+-import br.gov.caixa.silce.dominio.servico.compra.IdNuvem;
+-
+-public abstract class IntegracaoSynchronizer<N extends IdNuvem, E extends AbstractEntidade<I>, I extends Serializable>
+-        extends AbstractIntegracaoSynchronizer<N, E, I> {
+-
+-    public IntegracaoSynchronizer(SyncContext context) {
+-        super(context);
+-    }
+-
+-    @Override
+-    protected void cache(N nuvem, E entity) {
+-        this.context.getCache().put(nuvem.getIdNuvem(), entity);
+-    }
+-
+-    protected E find(N nuvem) {
+-        Long id = nuvem.getIdNuvem();
+-        return find(id);
+-    }
+-}
+diff --git a/silce-liberty-ejb/src/main/java/br/gov/caixa/silce/negocio/integracaocompra/importers/ReservaCotaBolaoSynchronizer.java b/silce-liberty-ejb/src/main/java/br/gov/caixa/silce/negocio/integracaocompra/importers/ReservaCotaBolaoSynchronizer.java
+index ef73c52..26f1f04 100644
+--- a/silce-liberty-ejb/src/main/java/br/gov/caixa/silce/negocio/integracaocompra/importers/ReservaCotaBolaoSynchronizer.java
++++ b/silce-liberty-ejb/src/main/java/br/gov/caixa/silce/negocio/integracaocompra/importers/ReservaCotaBolaoSynchronizer.java
+@@ -10,45 +10,40 @@ import br.gov.caixa.silce.dominio.entidade.Aposta;
+ import br.gov.caixa.silce.dominio.entidade.Loterica;
+ import br.gov.caixa.silce.dominio.entidade.ReservaCotaBolao;
+ import br.gov.caixa.silce.dominio.entidade.ReservaCotaBolaoPK;
++import br.gov.caixa.silce.dominio.entidade.SituacaoReservaCotaBolao;
+ import br.gov.caixa.silce.dominio.servico.compra.NuvemIntegracaoLoterica;
+ import br.gov.caixa.silce.dominio.servico.compra.NuvemIntegracaoReserva;
+-import br.gov.caixa.silce.negocio.aposta.dao.ApostaDAO;
+-import br.gov.caixa.silce.negocio.aposta.dao.ReservaCotaBolaoDAO;
+-import br.gov.caixa.silce.negocio.aposta.dao.SituacaoReservaCotaBolaoDAO;
+-import br.gov.caixa.silce.negocio.apostador.dao.LotericaDAO;
++import br.gov.caixa.silce.negocio.aposta.dao.ApostaDAOLocal;
++import br.gov.caixa.silce.negocio.aposta.dao.ReservaCotaBolaoDAOLocal;
++import br.gov.caixa.silce.negocio.aposta.dao.SituacaoReservaCotaBolaoDAOLocal;
++import br.gov.caixa.silce.negocio.apostador.dao.LotericaDAOLocal;
+ import br.gov.caixa.silce.negocio.integracaocompra.IntegracaoUtil;
++import br.gov.caixa.silce.negocio.integracaocompra.mappers.ReservaCotaBolaoMapper;
+ 
+ 
+-public class ReservaCotaBolaoSynchronizer
+-        extends IntegracaoSynchronizer<NuvemIntegracaoReserva, ReservaCotaBolao, ReservaCotaBolaoPK> {
++public class ReservaCotaBolaoSynchronizer extends AbstractIdNuvemSynchronizer<NuvemIntegracaoReserva, ReservaCotaBolao, ReservaCotaBolaoPK> {
+ 
+     private static final Logger LOG = LogManager.getLogger(ReservaCotaBolaoSynchronizer.class, new MessageFormatMessageFactory());
+ 
+-    ReservaCotaBolaoDAO reservaCotaBolaoDAO;
+-    SituacaoReservaCotaBolaoDAO situacaoReservaCotaBolaoDAO;
+-    ApostaDAO apostaDAO;
+-    LotericaDAO lotericaDAO;
++    SituacaoReservaCotaBolaoDAOLocal situacaoReservaCotaBolaoDAO;
++    ApostaDAOLocal apostaDAO;
++    LotericaDAOLocal lotericaDAO;
+ 
+-    public ReservaCotaBolaoSynchronizer(SyncContext context) {
+-        super(context);
+-        try {
+-            reservaCotaBolaoDAO = getDao(ReservaCotaBolaoDAO.class);
+-            apostaDAO = getDao(ApostaDAO.class);
+-            situacaoReservaCotaBolaoDAO = getDao(SituacaoReservaCotaBolaoDAO.class);
+-            lotericaDAO = getDao(LotericaDAO.class);
+-        } catch (NamingException e) {
+-            logInitError(e);
+-        }
++    public ReservaCotaBolaoSynchronizer(SyncContext.EntityCache cache) throws NamingException {
++        apostaDAO = getDao(ApostaDAOLocal.class);
++        situacaoReservaCotaBolaoDAO = getDao(SituacaoReservaCotaBolaoDAOLocal.class);
++        lotericaDAO = getDao(LotericaDAOLocal.class);
++        this.dao = getDao(ReservaCotaBolaoDAOLocal.class);
++        this.cache = cache;
++        this.mapper = new ReservaCotaBolaoMapper();
+     }
+ 
+     @Override
+-    protected ReservaCotaBolao prepareUpdate(NuvemIntegracaoReserva reservaNuvem) {
+-        // ReservaCotaBolaoPK id = new ReservaCotaBolaoPK(reservaNuvem.)
+-        Long idLegadoAposta = reservaNuvem.aposta.getIdLegado();
++    protected ReservaCotaBolao fetch(NuvemIntegracaoReserva nuvem) {
++        Long idLegadoAposta = nuvem.aposta.getIdLegado();
+         if (idLegadoAposta == null) throw new IllegalStateException("id legado da aposta é null");
+         Aposta<?> aposta = apostaDAO.findById(idLegadoAposta);
+         ReservaCotaBolao reserva = aposta.getReservaCotaBolao();
+-        mapper.map(reservaNuvem, reserva);
+         return reserva;
+     }
+ 
+@@ -56,8 +51,8 @@ public class ReservaCotaBolaoSynchronizer
+     protected ReservaCotaBolao update(NuvemIntegracaoReserva reservaNuvem) {
+         ReservaCotaBolao reserva = find(reservaNuvem);
+         if (reserva == null) throw new IllegalStateException("num achei a reserva pow");
+-        resolveRelations(reservaNuvem, reserva);
+-        ReservaCotaBolao x = reservaCotaBolaoDAO.update(reserva);
++        resolve(reservaNuvem, reserva);
++        ReservaCotaBolao x = dao.update(reserva);
+         if (x != reserva) throw new IllegalStateException("entidade reserva retornada não é a mesma do cache");
+         return reserva;
+     }
+@@ -65,24 +60,21 @@ public class ReservaCotaBolaoSynchronizer
+     @Override
+     protected ReservaCotaBolao create(NuvemIntegracaoReserva reservaNuvem) {
+         ReservaCotaBolao reserva = find(reservaNuvem);
+-        // resolveRelations(reservaNuvem, reserva);
+-        ReservaCotaBolaoPK pk = new ReservaCotaBolaoPK( IntegracaoUtil.getMesAtual(), IntegracaoUtil.getParticao(reservaNuvem.nsu));
+-        // TODO: conferir se essa geração de partição é aceitável
++        resolve(reservaNuvem, reserva);
++        ReservaCotaBolaoPK pk = new ReservaCotaBolaoPK(IntegracaoUtil.getMesAtual(), IntegracaoUtil.getParticao(reservaNuvem.nsu));
+         reserva.setId(pk);
+-        reserva.setAno(IntegracaoUtil.getAnoAtual());
+-        reserva.setLoterica(recuperarLoterica(reservaNuvem.loterica));
+-        reservaCotaBolaoDAO.insert(reserva);
+-        Aposta<?> aposta = this.context.getCache().find(reservaNuvem.aposta.getIdNuvem(), Aposta.class);
+-        reserva.setAposta(aposta);
++        dao.insert(reserva);
+         return reserva;
+     }
+ 
+     @Override
+-    protected void resolveRelations(NuvemIntegracaoReserva reservaNuvem, ReservaCotaBolao reserva) {
+-        Aposta<?> aposta = this.context.getCache().find(reservaNuvem.aposta.getIdNuvem(), Aposta.class);
+-        reserva.setAposta(aposta);
+-        reserva.setAno(IntegracaoUtil.getAnoAtual());
++    protected void resolve(NuvemIntegracaoReserva reservaNuvem, ReservaCotaBolao reserva) {
+         reserva.setLoterica(recuperarLoterica(reservaNuvem.loterica));
++        reserva.setSituacao(recuperarSituacaoReservaCotaBolao(reservaNuvem.situacao));
++    }
++
++    private SituacaoReservaCotaBolao recuperarSituacaoReservaCotaBolao(Long situacao) {
++        return situacaoReservaCotaBolaoDAO.findById(situacao);
+     }
+ 
+     private Loterica recuperarLoterica(NuvemIntegracaoLoterica loterica) {
+diff --git a/silce-liberty-ejb/src/main/java/br/gov/caixa/silce/negocio/integracaocompra/importers/SyncContext.java b/silce-liberty-ejb/src/main/java/br/gov/caixa/silce/negocio/integracaocompra/importers/SyncContext.java
+index 2e7a7b9..2ca554b 100644
+--- a/silce-liberty-ejb/src/main/java/br/gov/caixa/silce/negocio/integracaocompra/importers/SyncContext.java
++++ b/silce-liberty-ejb/src/main/java/br/gov/caixa/silce/negocio/integracaocompra/importers/SyncContext.java
+@@ -1,8 +1,13 @@
+ package br.gov.caixa.silce.negocio.integracaocompra.importers;
+ 
++import java.io.Serializable;
++import java.util.HashMap;
+ import java.util.Map;
++import java.util.Map.Entry;
+ import java.util.Objects;
+ 
++import javax.naming.NamingException;
++
+ import br.gov.caixa.dominio.AbstractEntidade;
+ import br.gov.caixa.silce.dominio.entidade.Aposta;
+ import br.gov.caixa.silce.dominio.entidade.ApostaComprada;
+@@ -16,6 +21,10 @@ import br.gov.caixa.silce.dominio.servico.compra.NuvemIntegracaoCombo;
+ import br.gov.caixa.silce.dominio.servico.compra.NuvemIntegracaoCompra;
+ import br.gov.caixa.silce.dominio.servico.compra.NuvemIntegracaoReserva;
+ 
++/**
++ * Contêiner que reúne os sincronizadores necessários a uma sincronização completa. Também guarda o cache/grafo de entidades. Os sincronizadores compartilham o
++ * contexto 
++ */
+ public class SyncContext {
+ 
+     private EntityCache cache;
+@@ -26,13 +35,13 @@ public class SyncContext {
+     private AbstractIntegracaoSynchronizer<NuvemIntegracaoApostaComprada, ApostaComprada, Long> apostaCompradaSynchronizer;
+     private AbstractIntegracaoSynchronizer<NuvemIntegracaoReserva, ReservaCotaBolao, ReservaCotaBolaoPK> reservaCotaBolaoSynchronizer;
+ 
+-    public SyncContext() {
+-        this.compraSynchronizer = new CompraSynchronizer(this);
++    public SyncContext() throws NamingException {
+         this.cache = new EntityCache();
+-        this.comboSynchronizer = new ComboApostaSynchronizer(this);
+-        this.apostaSynchronizer = new ApostaSynchronizer(this);
+-        this.apostaCompradaSynchronizer = new ApostaCompradaSynchronizer(this);
+-        this.reservaCotaBolaoSynchronizer = new ReservaCotaBolaoSynchronizer(this);
++        this.compraSynchronizer = new CompraSynchronizer(this.cache);
++        this.comboSynchronizer = new ComboApostaSynchronizer(this.cache);
++        this.apostaSynchronizer = new ApostaSynchronizer(this.cache);
++        this.apostaCompradaSynchronizer = new ApostaCompradaSynchronizer(this.cache);
++        this.reservaCotaBolaoSynchronizer = new ReservaCotaBolaoSynchronizer(this.cache);
+     }
+ 
+     public AbstractIntegracaoSynchronizer<NuvemIntegracaoCompra, Compra, Long> getCompraSynchronizer() {
+@@ -59,6 +68,14 @@ public class SyncContext {
+         return cache;
+     }
+ 
++    public Map<Key<?>, Serializable> getIdMap() {
++        return cache.getIdMap();
++    }
++
++    public <E extends AbstractEntidade<I>, I extends Serializable> Map<Long, I> getIdMap(Class<E> type) {
++        return cache.getIdMap(type);
++    }
++
+     public void dispose() {
+         clearState();
+     }
+@@ -75,7 +92,7 @@ public class SyncContext {
+     public static class EntityCache {
+ 
+         private volatile boolean disposed;
+-        private Map<Key<?>, AbstractEntidade<?>> cache;
++        private final Map<Key<?>, AbstractEntidade<?>> cache = new HashMap<>();
+ 
+         public boolean isDisposed() {
+             return disposed;
+@@ -106,16 +123,48 @@ public class SyncContext {
+             Key key = new Key(id, value.getClass());
+             cache.put(key, value);
+         }
++
++        public Map<Key<?>, Serializable> getIdMap() {
++            Map<Key<?>, Serializable> ids = new HashMap<Key<?>, Serializable>();
++            for (Entry<Key<?>, AbstractEntidade<?>> entry : cache.entrySet()) {
++                ids.put(entry.getKey(), entry.getValue().getId());
++            }
++            return ids;
++        }
++
++        public <E extends AbstractEntidade<I>, I extends Serializable> Map<Long, I> getIdMap(Class<E> type) {
++            Map<Long, I> ids = new HashMap<Long, I>();
++
++            for (Entry<Key<?>, AbstractEntidade<?>> entry : cache.entrySet()) {
++                Key<?> key = entry.getKey();
++                if (!key.matches(type)) {
++                    continue;
++                }
++
++                Object idNuvem = key.getId();
++                if (!(idNuvem instanceof Long)) {
++                    throw new IllegalStateException("id nuvem incompatível com o mapa tipado: " + idNuvem);
++                }
++
++                @SuppressWarnings("unchecked")
++                AbstractEntidade<I> entity = (AbstractEntidade<I>) entry.getValue();
++                ids.put((Long) idNuvem, entity.getId());
++            }
++
++            return ids;
++        }
+     }
+ 
+     public static class Key<T extends AbstractEntidade<?>> {
+ 
+         private final Object id;
+         private final Class<T> type;
++        private final Class<?> identityRootType;
+ 
+         public Key(Object id, Class<T> type) {
+             this.id = id;
+             this.type = type;
++            this.identityRootType = resolveIdentityRootType(type);
+         }
+ 
+         public Class<T> getType() {
+@@ -126,17 +175,35 @@ public class SyncContext {
+             return this.id;
+         }
+ 
++        public boolean matches(Class<?> otherType) {
++            return areCompatibleTypes(type, otherType);
++        }
++
+         @Override
+         public boolean equals(Object o) {
+             if (this == o) return true;
+             if (!(o instanceof Key)) return false;
+             Key<?> other = (Key<?>) o;
+-            return type.equals(other.type) && id.equals(other.id);
++            return Objects.equals(id, other.id) && areCompatibleTypes(type, other.type);
+         }
+ 
+         @Override
+         public int hashCode() {
+-            return Objects.hash(type, id);
++            return Objects.hash(identityRootType, id);
++        }
++
++        private static boolean areCompatibleTypes(Class<?> left, Class<?> right) {
++            return left.isAssignableFrom(right) || right.isAssignableFrom(left);
++        }
++
++        private static Class<?> resolveIdentityRootType(Class<?> type) {
++            Class<?> root = type;
++            Class<?> parent = root.getSuperclass();
++            while (parent != null && parent != Object.class) {
++                root = parent;
++                parent = root.getSuperclass();
++            }
++            return root;
+         }
+     }
+ }
+diff --git a/silce-liberty-ejb/src/main/java/br/gov/caixa/silce/negocio/integracaocompra/mappers/ApostaCompradaMapper.java b/silce-liberty-ejb/src/main/java/br/gov/caixa/silce/negocio/integracaocompra/mappers/ApostaCompradaMapper.java
+index 463f2f7..58e9e14 100644
+--- a/silce-liberty-ejb/src/main/java/br/gov/caixa/silce/negocio/integracaocompra/mappers/ApostaCompradaMapper.java
++++ b/silce-liberty-ejb/src/main/java/br/gov/caixa/silce/negocio/integracaocompra/mappers/ApostaCompradaMapper.java
+@@ -7,19 +7,25 @@ import br.gov.caixa.silce.dominio.Subcanal;
+ import br.gov.caixa.silce.dominio.servico.compra.NuvemIntegracaoApostaComprada;
+ import br.gov.caixa.util.Decimal;
+ 
+-public class ApostaCompradaMapper {
++public class ApostaCompradaMapper extends Mapper<NuvemIntegracaoApostaComprada, ApostaComprada>{
+ 
++    @Override
+     public ApostaComprada map(NuvemIntegracaoApostaComprada apostaCompradaNuvem) {
+         ApostaComprada apostaComprada = new ApostaComprada();
+-        apostaComprada.setDataUltimaSituacao( IntegracaoUtil.extrairData(apostaCompradaNuvem.tsUltimaSituacao));
++        return map(apostaCompradaNuvem, apostaComprada);
++    }
++
++    @Override
++    public ApostaComprada map(NuvemIntegracaoApostaComprada apostaCompradaNuvem, ApostaComprada apostaComprada) {
++        apostaComprada.setDataUltimaSituacao(IntegracaoUtil.extrairData(apostaCompradaNuvem.tsUltimaSituacao));
+         apostaComprada.setConcursoInicial(apostaCompradaNuvem.concursoInicial);
+         apostaComprada.setNsuTransacao(apostaCompradaNuvem.nsu);
+         apostaComprada.setNsuTransacaoDevolucao(apostaCompradaNuvem.nsuDevolucao);
+         apostaComprada.setNsb(null); // TODO puxar de comprada.nsb
+         apostaComprada.setPremio(null); // TODO
+-        apostaComprada.setSubcanalPagamento( Subcanal.getByCodigo(apostaCompradaNuvem.subcanal));
++        apostaComprada.setSubcanalPagamento(Subcanal.getByCodigo(apostaCompradaNuvem.subcanal));
+         apostaComprada.setApostaTroca(apostaCompradaNuvem.bilheteTroca);
+-        apostaComprada.setValorComissao( new Decimal(apostaCompradaNuvem.valorComissao));
++        apostaComprada.setValorComissao(new Decimal(apostaCompradaNuvem.valorComissao));
+         apostaComprada.setIndicadorBloqueioDevolucao( apostaCompradaNuvem.bloqueioDevolucao);
+ 
+         apostaComprada.setDataEfetivacaoSISPL(IntegracaoUtil.extrairData(apostaCompradaNuvem.tsEfetivacaoSispl));
+diff --git a/silce-liberty-ejb/src/main/java/br/gov/caixa/silce/negocio/integracaocompra/mappers/ApostaMapper.java b/silce-liberty-ejb/src/main/java/br/gov/caixa/silce/negocio/integracaocompra/mappers/ApostaMapper.java
+index 9a2521a..75c5ecc 100644
+--- a/silce-liberty-ejb/src/main/java/br/gov/caixa/silce/negocio/integracaocompra/mappers/ApostaMapper.java
++++ b/silce-liberty-ejb/src/main/java/br/gov/caixa/silce/negocio/integracaocompra/mappers/ApostaMapper.java
+@@ -1,12 +1,18 @@
+ package br.gov.caixa.silce.negocio.integracaocompra.mappers;
+ 
++import br.gov.caixa.silce.dominio.entidade.AbstractApostaNumerica;
+ import br.gov.caixa.silce.dominio.entidade.Aposta;
++import br.gov.caixa.silce.dominio.entidade.ApostaMegasena;
+ import br.gov.caixa.silce.dominio.servico.compra.NuvemIntegracaoAposta;
+ import br.gov.caixa.silce.dominio.util.ApostaUtil;
+ import br.gov.caixa.util.Data;
+ import br.gov.caixa.util.Decimal;
+ import br.gov.caixa.silce.dominio.jogos.IndicadorSurpresinha;
+ import br.gov.caixa.silce.dominio.jogos.Modalidade;
++import br.gov.caixa.silce.dominio.jogos.PalpitesSequenciais;
++
++import java.util.List;
++
+ import br.gov.caixa.silce.dominio.Subcanal;
+ import br.gov.caixa.silce.dominio.jogos.TipoConcurso;
+ 
+@@ -21,13 +27,18 @@ public class ApostaMapper extends Mapper<NuvemIntegracaoAposta, Aposta<?>> {
+ 
+     @Override
+     public Aposta<?> map(NuvemIntegracaoAposta apostaNuvem, Aposta<?> aposta) {
+-        aposta.setTipoConcurso( TipoConcurso.getByCodigo(apostaNuvem.tipoConcurso.toString().charAt(0)));
+-        aposta.setIndicadorSurpresinha( IndicadorSurpresinha.getByCodigo(apostaNuvem.indicadorSurpresinha));
++        aposta.setTipoConcurso(TipoConcurso.getByCodigo(apostaNuvem.tipoConcurso.toString().charAt(0)));
++        aposta.setIndicadorSurpresinha(IndicadorSurpresinha.getByCodigo(apostaNuvem.indicadorSurpresinha));
+         aposta.setValor(new Decimal(apostaNuvem.valor));
+         aposta.setConcursoAlvo(apostaNuvem.concursoAlvo);
+         aposta.setDataInclusao(new Data(apostaNuvem.dataInclusao));
+         aposta.setSubcanalCarrinhoAposta(Subcanal.getByCodigo(apostaNuvem.subcanal));
+         aposta.setIndicadorBolao(apostaNuvem.reservaCotaBolao != null ? Boolean.TRUE : Boolean.FALSE);
++        if (aposta instanceof AbstractApostaNumerica) {
++            AbstractApostaNumerica apostaNumerica = (AbstractApostaNumerica) aposta;
++            List<Integer> prognosticos = new PalpitesSequenciais(apostaNuvem.prognostico).getPrognosticos();
++            apostaNumerica.setPrognosticos(prognosticos);
++        }
+         return aposta;
+     }
+ }
+diff --git a/silce-liberty-ejb/src/main/java/br/gov/caixa/silce/negocio/integracaocompra/mappers/ComboApostaMapper.java b/silce-liberty-ejb/src/main/java/br/gov/caixa/silce/negocio/integracaocompra/mappers/ComboApostaMapper.java
+index 5fcc76a..625ef62 100644
+--- a/silce-liberty-ejb/src/main/java/br/gov/caixa/silce/negocio/integracaocompra/mappers/ComboApostaMapper.java
++++ b/silce-liberty-ejb/src/main/java/br/gov/caixa/silce/negocio/integracaocompra/mappers/ComboApostaMapper.java
+@@ -4,10 +4,15 @@ import br.gov.caixa.silce.dominio.entidade.ComboAposta;
+ import br.gov.caixa.silce.dominio.servico.compra.NuvemIntegracaoCombo;
+ import br.gov.caixa.silce.negocio.integracaocompra.IntegracaoUtil;
+ 
+-public class ComboApostaMapper {
++public class ComboApostaMapper extends Mapper<NuvemIntegracaoCombo, ComboAposta> {
+ 
+     public ComboAposta map(NuvemIntegracaoCombo comboApostaNuvem) {
+         ComboAposta combo = new ComboAposta();
++        return map(comboApostaNuvem, combo);
++    }
++
++    @Override
++    public ComboAposta map(NuvemIntegracaoCombo comboApostaNuvem, ComboAposta combo) {
+         combo.setMes((long) IntegracaoUtil.getMesAtual());
+         combo.setParticao( (long) IntegracaoUtil.getParticao(comboApostaNuvem.idNuvem)); // TODO conferir se essa geração de partição é aceitável
+         // obs: o campo de data é transiente e, até onde investiguei, nem sequer é preenchido no fluxo atual do carrinho nuvem
+diff --git a/silce-liberty-ejb/src/main/java/br/gov/caixa/silce/negocio/integracaocompra/mappers/CompraMapper.java b/silce-liberty-ejb/src/main/java/br/gov/caixa/silce/negocio/integracaocompra/mappers/CompraMapper.java
+index 9109c26..a516983 100644
+--- a/silce-liberty-ejb/src/main/java/br/gov/caixa/silce/negocio/integracaocompra/mappers/CompraMapper.java
++++ b/silce-liberty-ejb/src/main/java/br/gov/caixa/silce/negocio/integracaocompra/mappers/CompraMapper.java
+@@ -6,12 +6,14 @@ import br.gov.caixa.silce.dominio.servico.compra.NuvemIntegracaoCompra;
+ import br.gov.caixa.silce.negocio.integracaocompra.IntegracaoUtil;
+ import br.gov.caixa.util.Decimal;
+ 
+-public class CompraMapper {
++public class CompraMapper extends Mapper<NuvemIntegracaoCompra, Compra>{
+ 
+     public Compra map(NuvemIntegracaoCompra compraNuvem) {
+-
+         Compra compra = new Compra();
++        return map(compraNuvem, compra);
++    }
+ 
++    public Compra map(NuvemIntegracaoCompra compraNuvem, Compra compra) {
+         compra.setNsuTransacaoDebito(compraNuvem.nsuTransacaoDebito);
+         compra.setNsuTransacaoEstorno(compraNuvem.nsuTransacaoEstorno);
+         compra.setNsu(compraNuvem.nsu);
+@@ -29,23 +31,24 @@ public class CompraMapper {
+         compra.setHoraInicioCompra( IntegracaoUtil.extrairHora(compraNuvem.dataInicioCompra));
+ 
+         // Data/hora finalização da compra
+-        compra.setDataFinalizacaoCompra( IntegracaoUtil.extrairData(compraNuvem.dataFinalizacaoCompra));
+-        compra.setHoraFinalizacaoCompra( IntegracaoUtil.extrairHora(compraNuvem.dataFinalizacaoCompra));
++        compra.setDataFinalizacaoCompra(IntegracaoUtil.extrairData(compraNuvem.dataFinalizacaoCompra));
++        compra.setHoraFinalizacaoCompra(IntegracaoUtil.extrairHora(compraNuvem.dataFinalizacaoCompra));
+ 
+         // Data/hora expiração do pagamento
+-        compra.setDataExpiracaoPagamento( IntegracaoUtil.extrairData(compraNuvem.dataExpiracaoPagamento));
+-        compra.setHoraExpiracaoPagamento( IntegracaoUtil.extrairHora(compraNuvem.dataExpiracaoPagamento));
++        compra.setDataExpiracaoPagamento(IntegracaoUtil.extrairData(compraNuvem.dataExpiracaoPagamento));
++        compra.setHoraExpiracaoPagamento(IntegracaoUtil.extrairHora(compraNuvem.dataExpiracaoPagamento));
+ 
+-        compra.setValorTotal( compraNuvem.valorTotal != null ? new Decimal(compraNuvem.valorTotal) : null);
+-        compra.setValorComissao( compraNuvem.valorComissao != null ? new Decimal(compraNuvem.valorComissao) : null);
++        compra.setValorTotal(compraNuvem.valorTotal != null ? new Decimal(compraNuvem.valorTotal) : null);
++        compra.setValorComissao(compraNuvem.valorComissao != null ? new Decimal(compraNuvem.valorComissao) : null);
+ 
+         compra.setNuMeioPagamento(compraNuvem.meioPagamento);
+ 
+-        compra.setSubcanalPagamento( Subcanal.getByCodigo(compraNuvem.subcanalPagamento));
++        compra.setSubcanalPagamento(Subcanal.getByCodigo(compraNuvem.subcanalPagamento));
+ 
+-        compra.setParticao( (long) IntegracaoUtil.getParticao(compraNuvem.nsu)); // TODO conferir se essa geração de partição é aceitável
++        compra.setParticao((long) IntegracaoUtil.getParticao(compraNuvem.nsu)); // TODO conferir se essa geração de partição é aceitável
+         compra.setMes((long) IntegracaoUtil.getMesAtual());
+ 
+         return compra;
++
+     }
+ }
+diff --git a/silce-liberty-ejb/src/main/java/br/gov/caixa/silce/negocio/integracaocompra/mappers/ReservaCotaBolaoMapper.java b/silce-liberty-ejb/src/main/java/br/gov/caixa/silce/negocio/integracaocompra/mappers/ReservaCotaBolaoMapper.java
+index 617d4dc..bf72093 100644
+--- a/silce-liberty-ejb/src/main/java/br/gov/caixa/silce/negocio/integracaocompra/mappers/ReservaCotaBolaoMapper.java
++++ b/silce-liberty-ejb/src/main/java/br/gov/caixa/silce/negocio/integracaocompra/mappers/ReservaCotaBolaoMapper.java
+@@ -5,14 +5,21 @@ import br.gov.caixa.silce.dominio.servico.compra.NuvemIntegracaoReserva;
+ import br.gov.caixa.silce.negocio.integracaocompra.IntegracaoUtil;
+ import br.gov.caixa.util.Decimal;
+ 
+-public class ReservaCotaBolaoMapper {
++public class ReservaCotaBolaoMapper extends Mapper<NuvemIntegracaoReserva, ReservaCotaBolao>{
+ 
++    @Override
+     public ReservaCotaBolao map(NuvemIntegracaoReserva reservaCotaBolaoNuvem) {
+         ReservaCotaBolao reserva = new ReservaCotaBolao();
++        return map(reservaCotaBolaoNuvem, reserva);
++    }
++
++    @Override
++    public ReservaCotaBolao map(NuvemIntegracaoReserva reservaCotaBolaoNuvem, ReservaCotaBolao reserva) {
+         reserva.setCodBolao(reservaCotaBolaoNuvem.codBolao);
+         reserva.setQtdCotaTotal(reservaCotaBolaoNuvem.qtdCotaTotal);
+         reserva.setDataRegistroBolao(IntegracaoUtil.extrairData(reservaCotaBolaoNuvem.dataRegistroBolao));
+         reserva.setHoraRegistroBolao(IntegracaoUtil.extrairHora(reservaCotaBolaoNuvem.dataRegistroBolao));
++        reserva.setAno(IntegracaoUtil.getAnoAtual());
+         reserva.setNumeroTerminalLoterico(reservaCotaBolaoNuvem.numeroTerminalLoterico);
+ 
+ 
+-- 
+2.39.3 (Apple Git-146)
+
