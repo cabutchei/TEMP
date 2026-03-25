@@ -7,5 +7,5 @@ import br.gov.caixa.silce.dominio.servico.compra.MsgNuvemIntegracaoCompraSolicit
 @Remote
 public interface ControlaIntegracaoCompraRemote {
 
-    void trateNotificacaoCompraNuvem(MsgNuvemIntegracaoCompraSolicitacao solicitacao);
+    void trateNotificacaoCompraNuvem(MsgNuvemIntegracaoCompraSolicitacao solicitacao) throws Exception;
 }
