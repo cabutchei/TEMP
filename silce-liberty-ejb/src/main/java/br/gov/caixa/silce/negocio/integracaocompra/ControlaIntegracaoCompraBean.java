@@ -5,6 +5,7 @@ import java.util.Map;
 
 import javax.ejb.EJB;
 import javax.ejb.Stateless;
+import javax.naming.NamingException;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -18,7 +19,6 @@ import br.gov.caixa.silce.dominio.servico.compra.MsgNuvemIntegracaoCompraSolicit
 import br.gov.caixa.silce.dominio.servico.compra.NuvemIntegracaoAposta;
 import br.gov.caixa.silce.dominio.servico.compra.NuvemIntegracaoCombo;
 import br.gov.caixa.silce.dominio.servico.compra.NuvemIntegracaoCompra;
-import br.gov.caixa.silce.dominio.servico.compra.NuvemIntegracaoReserva;
 import br.gov.caixa.silce.negocio.apostador.dao.ApostadorDAOLocal;
 import br.gov.caixa.silce.negocio.aposta.dao.CompraDAOLocal;
 import br.gov.caixa.silce.negocio.aposta.dao.CompraFacadeLocal;
@@ -96,12 +96,12 @@ public class ControlaIntegracaoCompraBean implements ControlaIntegracaoCompraLoc
             return;
         }
 
-        SyncContext context = new SyncContext();
+        SyncContext context = new SyncContext(Mode.CREATE);
 
         NuvemIntegracaoCompra compraNuvem = solicitacao.compra;
 
-        preparar(solicitacao, Mode.CREATE, context);
-        integrar(solicitacao, Mode.CREATE, context);
+        preparar(solicitacao, context);
+        integrar(solicitacao, context);
 
         Long idCompraLegado = context.getCache().find(compraNuvem.idNuvem, Compra.class).getId();
         Map<Long, Long> idsApostasNuvemLegadoMap = context.getIdMap(Aposta.class);
@@ -119,10 +119,10 @@ public class ControlaIntegracaoCompraBean implements ControlaIntegracaoCompraLoc
             throw new IllegalStateException("Compra " + solicitacao.compra.idNuvem + "/" + solicitacao.compra.idLegado + " NÃO existe no legado");
         }
 
-        SyncContext context = new SyncContext();
+        SyncContext context = new SyncContext(Mode.UPDATE);
 
-        preparar(solicitacao, Mode.UPDATE, context);
-        integrar(solicitacao, Mode.UPDATE, context);
+        preparar(solicitacao, context);
+        integrar(solicitacao, context);
 
         Long idCompraLegado = compra.getId();
         Map<Long, Long> idsApostasNuvemLegadoMap = context.getIdMap(Aposta.class);
@@ -131,50 +131,32 @@ public class ControlaIntegracaoCompraBean implements ControlaIntegracaoCompraLoc
         confirmaIntegracaoSucesso(solicitacao.idMensagemSolicitacao, solicitacao.compra.idNuvem, idCompraLegado, idsApostasNuvemLegadoMap, idsCombosNuvemLegado);
     }
 
-    private void preparar(MsgNuvemIntegracaoCompraSolicitacao solicitacao, Mode mode, SyncContext context) {
+    private void preparar(MsgNuvemIntegracaoCompraSolicitacao solicitacao, SyncContext context) throws NamingException {
         NuvemIntegracaoCompra compraNuvem = solicitacao.compra;
         List<NuvemIntegracaoAposta> apostasNuvem = solicitacao.apostas;
         List<NuvemIntegracaoCombo> combosNuvem = solicitacao.combos;
 
-        context.getCompraSynchronizer().prepare(compraNuvem, mode);
+        context.getCompraSynchronizer().prepare(compraNuvem, context.getMode());
+        context.getComboSynchronizer().prepare(combosNuvem);
+
         for (NuvemIntegracaoAposta apostaNuvem : apostasNuvem) {
-            context.getApostaCompradaSynchronizer().prepare(apostaNuvem.comprada, mode);
-            context.getApostaSynchronizer().prepare(apostaNuvem, mode);
+            context.getApostaCompradaSynchronizer().prepare(apostaNuvem.comprada);
+            context.getApostaSynchronizer().prepare(apostaNuvem);
             if (apostaNuvem.reservaCotaBolao != null) {
-                context.getReservaCotaBolaoSynchronizer()
-                    .prepare(apostaNuvem.reservaCotaBolao, mode);
+                context.getReservaCotaBolaoSynchronizer().prepare(apostaNuvem.reservaCotaBolao);
             }
         }
-
-        for (NuvemIntegracaoCombo comboNuvem : combosNuvem) {
-            context.getComboSynchronizer().prepare(comboNuvem, mode);
-        }
-
         // nota: acredito que, em atualizações, nada seria alterado nos combos. verificar isso.
     }
 
-    private void integrar(MsgNuvemIntegracaoCompraSolicitacao solicitacao, Mode mode, SyncContext context) {
-        List<NuvemIntegracaoAposta> apostasNuvem = solicitacao.apostas;
-        List<NuvemIntegracaoCombo> combosNuvem = solicitacao.combos;
-
+    private void integrar(MsgNuvemIntegracaoCompraSolicitacao solicitacao, SyncContext context) {
         context.getCompraSynchronizer().commit();
 
-        if (mode == Mode.CREATE && combosNuvem != null) {
-            for (NuvemIntegracaoCombo comboNuvem : combosNuvem) {
-                context.getComboSynchronizer().commit();
-            }
-        }
+        if (context.getMode() == Mode.CREATE) context.getComboSynchronizer().commit();
 
-        for (NuvemIntegracaoAposta apostaNuvem : apostasNuvem) {
-            NuvemIntegracaoReserva reservaNuvem = apostaNuvem.reservaCotaBolao;
-            if (reservaNuvem != null) {
-                // forçando o flush cedo para contornar o cascade errado do OpenJPA
-                context.getReservaCotaBolaoSynchronizer().commit(true);
-            }
-
-            context.getApostaSynchronizer().commit();
-            context.getApostaCompradaSynchronizer().commit();
-        }
+        context.getReservaCotaBolaoSynchronizer().commit(true);
+        context.getApostaSynchronizer().commit();
+        context.getApostaCompradaSynchronizer().commit();
 
         compraDAO.flush();
     }

@@ -65,7 +65,6 @@ public class CompraSynchronizer extends AbstractIdNuvemLegadoSynchronizer<NuvemI
     protected void resolve(NuvemIntegracaoCompra compraNuvem, Compra compra) {
         Apostador apostador = recuperarApostador(compraNuvem.apostador);
         compra.setApostador(apostador);
-        compra.setCompraIntegrada(true);
         compra.setSituacao(recuperarSituacaoCompra(compraNuvem));
         compra.setLoterica(recuperarLoterica(compraNuvem.loterica));
     }

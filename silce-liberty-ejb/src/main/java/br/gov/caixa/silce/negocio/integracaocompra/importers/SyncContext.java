@@ -28,39 +28,60 @@ import br.gov.caixa.silce.dominio.servico.compra.NuvemIntegracaoReserva;
 public class SyncContext {
 
     private EntityCache cache;
+    private final AbstractIntegracaoSynchronizer.Mode mode;
 
     private AbstractIntegracaoSynchronizer<NuvemIntegracaoCompra, Compra, Long> compraSynchronizer;
-    private AbstractIntegracaoSynchronizer<NuvemIntegracaoCombo, ComboAposta, Long> comboSynchronizer;
-    private AbstractIntegracaoSynchronizer<NuvemIntegracaoAposta, Aposta<?>, Long> apostaSynchronizer;
-    private AbstractIntegracaoSynchronizer<NuvemIntegracaoApostaComprada, ApostaComprada, Long> apostaCompradaSynchronizer;
-    private AbstractIntegracaoSynchronizer<NuvemIntegracaoReserva, ReservaCotaBolao, ReservaCotaBolaoPK> reservaCotaBolaoSynchronizer;
+    private BatchWorker<NuvemIntegracaoCombo, ComboAposta, Long> comboSynchronizer;
+    // private AbstractIntegracaoSynchronizer<NuvemIntegracaoAposta, Aposta<?>, Long> apostaSynchronizer;
+    private BatchWorker<NuvemIntegracaoAposta, Aposta<?>, Long> apostaSynchronizer;
+    private BatchWorker<NuvemIntegracaoApostaComprada, ApostaComprada, Long> apostaCompradaSynchronizer;
+    private BatchWorker<NuvemIntegracaoReserva, ReservaCotaBolao, ReservaCotaBolaoPK> reservaCotaBolaoSynchronizer;
 
-    public SyncContext() throws NamingException {
+    public SyncContext(AbstractIntegracaoSynchronizer.Mode mode) throws NamingException {
         this.cache = new EntityCache();
+        this.mode = mode;
         this.compraSynchronizer = new CompraSynchronizer(this.cache);
-        this.comboSynchronizer = new ComboApostaSynchronizer(this.cache);
-        this.apostaSynchronizer = new ApostaSynchronizer(this.cache);
-        this.apostaCompradaSynchronizer = new ApostaCompradaSynchronizer(this.cache);
-        this.reservaCotaBolaoSynchronizer = new ReservaCotaBolaoSynchronizer(this.cache);
+        // this.comboSynchronizer = new ComboApostaSynchronizer(this.cache);
+        this.comboSynchronizer = new ComboApostaBatchWorker(this.cache, this.mode);
+        // this.apostaSynchronizer = new ApostaSynchronizer(this.cache);
+        this.apostaSynchronizer = new ApostaBatchWorker(this.cache, this.mode);
+        // this.apostaCompradaSynchronizer = new ApostaCompradaSynchronizer(this.cache);
+        this.apostaCompradaSynchronizer = new ApostaCompradaBatchWorker(this.cache, this.mode);
+        // this.reservaCotaBolaoSynchronizer = new ReservaCotaBolaoSynchronizer(this.cache);
+        this.reservaCotaBolaoSynchronizer = new ReservaCotaBolaoBatchWorker(this.cache, this.mode);
     }
 
     public AbstractIntegracaoSynchronizer<NuvemIntegracaoCompra, Compra, Long> getCompraSynchronizer() {
         return compraSynchronizer;
     }
 
-    public AbstractIntegracaoSynchronizer<NuvemIntegracaoAposta, Aposta<?>, Long> getApostaSynchronizer() {
+    // public AbstractIntegracaoSynchronizer<NuvemIntegracaoAposta, Aposta<?>, Long> getApostaSynchronizer() {
+    //     return apostaSynchronizer;
+    // }
+
+    public BatchWorker<NuvemIntegracaoAposta, Aposta<?>, Long> getApostaSynchronizer() {
         return apostaSynchronizer;
     }
 
-    public AbstractIntegracaoSynchronizer<NuvemIntegracaoApostaComprada, ApostaComprada, Long> getApostaCompradaSynchronizer() {
+    // public AbstractIntegracaoSynchronizer<NuvemIntegracaoApostaComprada, ApostaComprada, Long> getApostaCompradaSynchronizer() {
+    //     return apostaCompradaSynchronizer;
+    // }
+    public BatchWorker<NuvemIntegracaoApostaComprada, ApostaComprada, Long> getApostaCompradaSynchronizer() {
         return apostaCompradaSynchronizer;
     }
 
-    public AbstractIntegracaoSynchronizer<NuvemIntegracaoCombo, ComboAposta, Long> getComboSynchronizer() {
+    // public AbstractIntegracaoSynchronizer<NuvemIntegracaoCombo, ComboAposta, Long> getComboSynchronizer() {
+    //     return comboSynchronizer;
+    // }
+
+    public BatchWorker<NuvemIntegracaoCombo, ComboAposta, Long> getComboSynchronizer() {
         return comboSynchronizer;
     }
 
-    public AbstractIntegracaoSynchronizer<NuvemIntegracaoReserva, ReservaCotaBolao, ReservaCotaBolaoPK> getReservaCotaBolaoSynchronizer() {
+    // public AbstractIntegracaoSynchronizer<NuvemIntegracaoReserva, ReservaCotaBolao, ReservaCotaBolaoPK> getReservaCotaBolaoSynchronizer() {
+    //     return reservaCotaBolaoSynchronizer;
+    // }
+    public BatchWorker<NuvemIntegracaoReserva, ReservaCotaBolao, ReservaCotaBolaoPK> getReservaCotaBolaoSynchronizer() {
         return reservaCotaBolaoSynchronizer;
     }
 
@@ -70,6 +91,10 @@ public class SyncContext {
 
     public Map<Key<?>, Serializable> getIdMap() {
         return cache.getIdMap();
+    }
+
+    public AbstractIntegracaoSynchronizer.Mode getMode() {
+        return mode;
     }
 
     public <E extends AbstractEntidade<I>, I extends Serializable> Map<Long, I> getIdMap(Class<E> type) {
