@@ -20,10 +20,10 @@ public final class ItemReservaCotaBolao {
     public ItemReservaCotaBolao(ItemCompravel item) {
         this.item = Objects.requireNonNull(item, "item não pode ser null");
 
-        if (!item.isAposta()) {
+        if (!item.isReservaCota()) {
             throw new IllegalArgumentException("Item não é uma reserva");
         }
-        if (item.getAposta() == null) {
+        if (item.getReserva() == null) {
             throw new IllegalArgumentException("Item não contém reserva");
         }
     }

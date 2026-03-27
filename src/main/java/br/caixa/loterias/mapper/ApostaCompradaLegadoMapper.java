@@ -22,7 +22,7 @@ public class ApostaCompradaLegadoMapper {
         comprada.setConcursoInicial(reservaMKP.getConcurso());
 
         if (reserva.getSituacao() != null) {
-            comprada.setSituacao(SituacaoApostaLegado.SituacaoLegado.EM_PROCESSAMENTO); // TODO: mapear situação
+            // comprada.setSituacao(SituacaoApostaLegado.SituacaoLegado.EM_PROCESSAMENTO); // TODO: mapear situação
         }
 
         comprada.setBilheteTroca(false); // Reservas de cota não têm bilhete de troca

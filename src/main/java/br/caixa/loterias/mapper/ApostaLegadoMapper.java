@@ -11,13 +11,16 @@ import br.caixa.loterias.model.legado.ComboApostaLegado;
 import br.caixa.loterias.model.legado.IndicadorSurpresinhaLegado;
 import br.caixa.loterias.model.legado.LotericaLegado;
 import br.caixa.loterias.model.legado.ModalidadeLegado;
+import br.caixa.loterias.model.legado.NSBLegado;
 import br.caixa.loterias.model.legado.ReservaCotaBolaoLegado;
+import br.caixa.loterias.model.legado.SituacaoApostaLegado;
 import br.caixa.loterias.model.legado.SubCanalLegado;
 import br.caixa.loterias.model.legado.TipoComboLegado;
 import br.caixa.loterias.model.legado.TipoConcursoLegado;
 import br.caixa.loterias.model.matrizprognostico.MatrizPrognostico;
 import jakarta.enterprise.context.ApplicationScoped;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.ArrayList;
@@ -85,9 +88,14 @@ public class ApostaLegadoMapper {
         apostaLegado.setIdNuvem(itemReservaCotaBolao.getId());
         apostaLegado.setCompra(compraMapper.toLegado(itemReservaCotaBolao.getCompra()));
         apostaLegado.setValor(itemReservaCotaBolao.getValorTotalCota());
+        apostaLegado.setComprada(toApostaCompradaLegado(itemReservaCotaBolao));
         apostaLegado.setSubcanal(toSubcanal(itemReservaCotaBolao.getCompra()));
         apostaLegado.setIndicadorBolao(Boolean.TRUE);
         apostaLegado.setReservaCotaBolao(toReservaCotaBolaoLegado(itemReservaCotaBolao));
+
+        if (apostaLegado.getComprada() != null) {
+            apostaLegado.getComprada().setAposta(apostaLegado);
+        }
 
         if (apostaLegado.getReservaCotaBolao() != null) {
             apostaLegado.getReservaCotaBolao().setAposta(apostaLegado);
@@ -160,6 +168,27 @@ public class ApostaLegadoMapper {
         return comprada;
     }
 
+    private ApostaCompradaLegado toApostaCompradaLegado(ItemReservaCotaBolao itemReservaCotaBolao) {
+        ApostaCompradaLegado comprada = new ApostaCompradaLegado();
+        comprada.setNsu(itemReservaCotaBolao.getNsuReserva());
+        comprada.setNsuDevolucao(null);
+        comprada.setConcursoInicial(null);
+        comprada.setBilheteTroca(Boolean.FALSE);
+        comprada.setTsInicioApostaComprada(toDate(itemReservaCotaBolao.getTimestampReserva()));
+        comprada.setTsEnvioSispl(null);
+        comprada.setTsEfetivacaoSispl(null);
+        comprada.setTsFinalizacaoProcessamento(toDate(itemReservaCotaBolao.getTimestampFinalizacaoProcessamento()));
+        comprada.setSituacao(toSituacaoApostaLegado(itemReservaCotaBolao));
+        comprada.setTsUltimaSituacao(toDate(itemReservaCotaBolao.getTimestampAlteracaoSituacao()));
+        comprada.setValorComissao(BigDecimal.ZERO);
+        comprada.setNsb(toNsbLegado(itemReservaCotaBolao.getNsbCota()));
+        comprada.setSubcanal(toSubcanal(itemReservaCotaBolao.getCompra()));
+        comprada.setBloqueioDevolucao(Boolean.FALSE);
+        comprada.setErroAposta(null);
+        comprada.setErroResgate(null);
+        return comprada;
+    }
+
     private ApostaLotomaniaLegado toApostaOriginalEspelho(ItemApostaIndividual itemApostaIndividual) {
         if (!Boolean.TRUE.equals(itemApostaIndividual.getEspelho())) {
             return null;
@@ -226,6 +255,27 @@ public class ApostaLegadoMapper {
         LotericaLegado loterica = new LotericaLegado();
         loterica.setId(itemReservaCotaBolao.getBolao().getLotericaId());
         return loterica;
+    }
+
+    private NSBLegado toNsbLegado(String valor) {
+        if (valor == null || valor.isBlank()) {
+            return null;
+        }
+
+        NSBLegado nsbLegado = new NSBLegado();
+        nsbLegado.setValor(valor);
+        return nsbLegado;
+    }
+
+    private SituacaoApostaLegado.SituacaoLegado toSituacaoApostaLegado(ItemReservaCotaBolao itemReservaCotaBolao) {
+        if (itemReservaCotaBolao.getSituacao() == null) {
+            return null;
+        }
+
+        return switch (itemReservaCotaBolao.getSituacao()) {
+            case RESERVADA -> SituacaoApostaLegado.SituacaoLegado.PROCESSANDO;
+            case CANCELADA -> SituacaoApostaLegado.SituacaoLegado.CANCELADA;
+        };
     }
 
     private Integer toInteger(Long value) {
