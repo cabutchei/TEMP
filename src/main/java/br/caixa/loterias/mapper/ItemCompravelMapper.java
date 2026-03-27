@@ -16,7 +16,7 @@ import org.mapstruct.MappingTarget;
 import org.mapstruct.ReportingPolicy;
 
 @Mapper(
-        componentModel = MappingConstants.ComponentModel.CDI,
+        componentModel = MappingConstants.ComponentModel.JAKARTA_CDI,
         uses = {
                 CompraMapper.class,
                 LegacyApostaSupportMapper.class,

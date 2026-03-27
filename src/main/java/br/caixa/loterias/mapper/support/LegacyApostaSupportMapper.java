@@ -14,7 +14,7 @@ import org.mapstruct.Named;
 import java.util.List;
 import java.util.stream.Collectors;
 
-@Mapper(componentModel = MappingConstants.ComponentModel.CDI, uses = {LegacyDateMapper.class, LegacyEnumMapper.class})
+@Mapper(componentModel = MappingConstants.ComponentModel.JAKARTA_CDI, uses = {LegacyDateMapper.class, LegacyEnumMapper.class})
 public abstract class LegacyApostaSupportMapper {
 
     @Inject
