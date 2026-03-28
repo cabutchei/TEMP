@@ -69,6 +69,7 @@
   });
 
   const fileInput = el("input", { type: "file" });
+  const fileInfo = el("div", { textContent: "No file selected" });
   const output = el("pre", { textContent: "Ready." });
 
   for (const input of [tokenInput, commitMessageInput, branchInput, fileInput]) {
@@ -78,6 +79,24 @@
 
   output.style.cssText =
     "white-space:pre-wrap;word-break:break-word;background:#1b1b1b;padding:10px;border-radius:6px;border:1px solid #333;min-height:160px;";
+  fileInfo.style.cssText = "margin:-2px 0 10px 0;color:#bbb;";
+
+  function formatBytes(bytes) {
+    if (!Number.isFinite(bytes) || bytes < 0) return "unknown size";
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(2)} KB`;
+    if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
+    return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`;
+  }
+
+  function updateFileInfo() {
+    const file = fileInput.files[0];
+    if (!file) {
+      fileInfo.textContent = "No file selected";
+      return;
+    }
+    fileInfo.textContent = `Selected: ${file.name} (${formatBytes(file.size)})`;
+  }
 
   function setOutput(value) {
     output.textContent =
@@ -178,6 +197,8 @@
     })()
   ]);
 
+  fileInput.addEventListener("change", updateFileInfo);
+
   panel.append(
     title,
     el("div", { textContent: `Repo: ${GITHUB_OWNER}/${GITHUB_REPO}` }),
@@ -189,6 +210,7 @@
     branchInput,
     el("div", { textContent: "File" }),
     fileInput,
+    fileInfo,
     buttons,
     output
   );
