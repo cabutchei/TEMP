@@ -63,10 +63,15 @@
     placeholder: "Commit message"
   });
 
+  const branchInput = el("input", {
+    value: "",
+    placeholder: "Branch (optional)"
+  });
+
   const fileInput = el("input", { type: "file" });
   const output = el("pre", { textContent: "Ready." });
 
-  for (const input of [tokenInput, commitMessageInput, fileInput]) {
+  for (const input of [tokenInput, commitMessageInput, branchInput, fileInput]) {
     input.style.cssText =
       "display:block;width:100%;margin:0 0 8px 0;padding:8px;box-sizing:border-box;background:#1b1b1b;color:#eee;border:1px solid #555;border-radius:6px;";
   }
@@ -90,6 +95,7 @@
   async function uploadToGithub() {
     const token = tokenInput.value.trim();
     const commitMessage = commitMessageInput.value.trim();
+    const branch = branchInput.value.trim();
     const file = fileInput.files[0];
 
     if (!token) {
@@ -109,6 +115,9 @@
       message: commitMessage,
       content
     };
+    if (branch) {
+      payload.branch = branch;
+    }
 
     const response = await fetch(url, {
       method: "PUT",
@@ -137,6 +146,7 @@
         },
         body: {
           message: payload.message,
+          branch: payload.branch || null,
           contentLength: payload.content.length,
           targetFilepath
         }
@@ -175,6 +185,8 @@
     tokenInput,
     el("div", { textContent: "Commit Message" }),
     commitMessageInput,
+    el("div", { textContent: "Branch" }),
+    branchInput,
     el("div", { textContent: "File" }),
     fileInput,
     buttons,
