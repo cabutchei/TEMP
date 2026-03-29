@@ -68,11 +68,17 @@
     placeholder: "Branch (optional)"
   });
 
+  const repoPathInput = el("input", {
+    value: "",
+    placeholder: "Repo path prefix (optional), e.g. some/path/"
+  });
+
   const fileInput = el("input", { type: "file" });
+  fileInput.multiple = true;
   const fileInfo = el("div", { textContent: "No file selected" });
   const output = el("pre", { textContent: "Ready." });
 
-  for (const input of [tokenInput, commitMessageInput, branchInput, fileInput]) {
+  for (const input of [tokenInput, commitMessageInput, branchInput, repoPathInput, fileInput]) {
     input.style.cssText =
       "display:block;width:100%;margin:0 0 8px 0;padding:8px;box-sizing:border-box;background:#1b1b1b;color:#eee;border:1px solid #555;border-radius:6px;";
   }
@@ -89,13 +95,21 @@
     return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`;
   }
 
+  function normalizeRepoPath(path) {
+    const trimmed = path.trim();
+    if (!trimmed) return "";
+    return trimmed.replace(/^\/+/, "").replace(/\/+$/, "");
+  }
+
   function updateFileInfo() {
-    const file = fileInput.files[0];
-    if (!file) {
+    const files = Array.from(fileInput.files || []);
+    if (!files.length) {
       fileInfo.textContent = "No file selected";
       return;
     }
-    fileInfo.textContent = `Selected: ${file.name} (${formatBytes(file.size)})`;
+    fileInfo.textContent = files
+      .map(file => `Selected: ${file.name} (${formatBytes(file.size)})`)
+      .join("\n");
   }
 
   function setOutput(value) {
@@ -115,7 +129,8 @@
     const token = tokenInput.value.trim();
     const commitMessage = commitMessageInput.value.trim();
     const branch = branchInput.value.trim();
-    const file = fileInput.files[0];
+    const repoPath = normalizeRepoPath(repoPathInput.value);
+    const files = Array.from(fileInput.files || []);
 
     if (!token) {
       throw new Error("Missing GitHub token");
@@ -123,58 +138,69 @@
     if (!commitMessage) {
       throw new Error("Missing commit message");
     }
-    if (!file) {
-      throw new Error("Select a file first");
+    if (!files.length) {
+      throw new Error("Select at least one file first");
     }
 
-    const content = await fileToBase64(file);
-    const targetFilepath = file.name;
-    const url = `${GITHUB_API_BASE}/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${encodeURIComponent(targetFilepath)}`;
-    const payload = {
-      message: commitMessage,
-      content
-    };
-    if (branch) {
-      payload.branch = branch;
-    }
+    const results = [];
+    for (const file of files) {
+      const content = await fileToBase64(file);
+      const targetFilepath = repoPath ? `${repoPath}/${file.name}` : file.name;
+      const url = `${GITHUB_API_BASE}/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${targetFilepath
+        .split("/")
+        .map(encodeURIComponent)
+        .join("/")}`;
+      const payload = {
+        message: commitMessage,
+        content
+      };
+      if (branch) {
+        payload.branch = branch;
+      }
 
-    const response = await fetch(url, {
-      method: "PUT",
-      headers: {
-        Authorization: `Bearer ${token}`,
-        Accept: "application/vnd.github+json"
-      },
-      body: JSON.stringify(payload)
-    });
+      const response = await fetch(url, {
+        method: "PUT",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          Accept: "application/vnd.github+json"
+        },
+        body: JSON.stringify(payload)
+      });
 
-    const responseText = await response.text();
-    let responseJson;
-    try {
-      responseJson = JSON.parse(responseText);
-    } catch {
-      responseJson = responseText;
+      const responseText = await response.text();
+      let responseJson;
+      try {
+        responseJson = JSON.parse(responseText);
+      } catch {
+        responseJson = responseText;
+      }
+
+      results.push({
+        request: {
+          url,
+          method: "PUT",
+          headers: {
+            Authorization: "Bearer ***",
+            Accept: "application/vnd.github+json"
+          },
+          body: {
+            message: payload.message,
+            branch: payload.branch || null,
+            contentLength: payload.content.length,
+            targetFilepath
+          }
+        },
+        response: {
+          ok: response.ok,
+          status: response.status,
+          body: responseJson
+        }
+      });
     }
 
     return {
-      request: {
-        url,
-        method: "PUT",
-        headers: {
-          Authorization: "Bearer ***",
-          Accept: "application/vnd.github+json"
-        },
-        body: {
-          message: payload.message,
-          branch: payload.branch || null,
-          contentLength: payload.content.length,
-          targetFilepath
-        }
-      },
-      response: {
-        ok: response.ok,
-        status: response.status,
-        body: responseJson
-      }
+      filesSelected: files.length,
+      results
     };
   }
 
@@ -208,7 +234,9 @@
     commitMessageInput,
     el("div", { textContent: "Branch" }),
     branchInput,
-    el("div", { textContent: "File" }),
+    el("div", { textContent: "Repo Path Prefix" }),
+    repoPathInput,
+    el("div", { textContent: "Files" }),
     fileInput,
     fileInfo,
     buttons,
