@@ -1,0 +1,70 @@
+services:
+  was:
+    image: silce-was:latest
+    platform: linux/amd64
+    container_name: silce-was
+    environment:
+      JVM_EXTRA_CMD_ARGS: -Xnoloa
+      IBM_MQ_HOST: mq
+      IBM_MQ_PORT: "1414"
+      IBM_MQ_QUEUE_MANAGER: BRD3
+      IBM_MQ_CHANNEL: BRD3.SVRCONN.SILCE
+      IBM_MQ_TRANSPORT_TYPE: "1"
+      IBM_MQ_USERNAME: SLCEBD01
+      IBM_MQ_PASSWORD: SLCEBD01
+    command:
+      - /bin/bash
+      - -lc
+      - |
+        trap '/opt/IBM/WebSphere/AppServer/profiles/AppSrv01/bin/stopServer.sh server1 || true; exit 0' TERM INT
+        /opt/IBM/WebSphere/AppServer/profiles/AppSrv01/bin/startServer.sh server1
+        while ps -ef | grep -q '[c]om.ibm.ws.runtime.WsServer'; do
+          sleep 5
+        done
+    ports:
+      - "9080:9080"
+      - "9043:9043"
+      - "9443:9443"
+      - "8880:8880"
+      - "9060:9060"
+      - "9633:9633"
+      - "2809:2809"
+      - "7777:7777"
+    volumes:
+    networks:
+      - silce-infra
+    depends_on:
+      mq:
+        condition: service_started
+
+  mq:
+    image: icr.io/ibm-messaging/mq:latest
+    platform: linux/amd64
+    container_name: silce-mq
+    entrypoint:
+      - /bin/bash
+      - /etc/mqm/start-local-mq.sh
+    environment:
+      LICENSE: accept
+      MQ_QMGR_NAME: BRD3
+      MQ_ADMIN_PASSWORD: SLCEBD01
+      MQ_APP_PASSWORD: SLCEBD01
+      MQ_ENABLE_METRICS: "false"
+    ports:
+      - "1414:1414"
+      - "9444:9443"
+    volumes:
+      - mqdata:/mnt/mqm
+      - /Users/cabutchei/Documents/vs_code/caixa/docker-was-silce/docker/was/mq/10-create-silce-queues.mqsc:/etc/mqm/10-create-silce-queues.mqsc:ro
+      - /Users/cabutchei/Documents/vs_code/caixa/docker-was-silce/docker/was/mq/start-local-mq.sh:/etc/mqm/start-local-mq.sh:ro
+    networks:
+      silce-infra:
+        aliases:
+          - mq
+
+volumes:
+  mqdata:
+
+networks:
+  silce-infra:
+    name: silce-infra
