@@ -1,0 +1,176 @@
+{
+  "canal": 9880,
+  "subcanal": "SILCE",
+  "dataHoraAtualizacao": "2026-04-16T12:54:21.000",
+  "valorLimiteDiario": 9999999,
+  "parametros": [
+    {
+      "parametroJogo": {
+        "concurso": {
+          "numero": 5880,
+          "modalidade": "MEGA_SENA",
+          "modalidadeDetalhada": {
+            "id": 2,
+            "descricao": "Mega-Sena"
+          },
+          "tipoConcurso": "ESPECIAL",
+          "dataAbertura": "15/04/2026 10:25:00",
+          "dataFechamento": "16/04/2026 16:00:00",
+          "dataHoraSorteio": "16/04/2026 17:00:00",
+          "dataSorteio": "16 abr 2026",
+          "valorApostaMinima": 6.0,
+          "situacao": "ABERTO",
+          "bloqueado": false,
+          "dataFinalBloqueio": "03/04/2018 15:00:00",
+          "estimativa": 9000000,
+          "naoInicializado": false
+        },
+        "situacaoConcursoCanal": "ABERTO",
+        "probabilidadeDeGanhar": 2,
+        "aceitaEspelho": false,
+        "prognosticoMaximo": 60,
+        "quantidadeMinima": 6,
+        "quantidadeMaxima": 20,
+        "quantidadeMinimaTrevo": null,
+        "teimosinhas": [0],
+        "valoresAposta": [
+          { "valor": 6.0, "numeroPrognosticos": 6 },
+          { "valor": 42.0, "numeroPrognosticos": 7 }
+        ],
+        "concursoDisponivelSimulacao": true,
+        "concursoCanalAberto": true,
+        "quantidadeSurpresinhas": null,
+        "trevos": null,
+        "equipes": null,
+        "partidas": null,
+        "legendas": [],
+        "valorApostaMinima": 6.0,
+        "meses": null
+      },
+      "proximoConcurso": {
+        "concurso": {
+          "numero": 5881,
+          "modalidade": "MEGA_SENA",
+          "modalidadeDetalhada": {
+            "id": 2,
+            "descricao": "Mega-Sena"
+          },
+          "tipoConcurso": "NORMAL",
+          "dataAbertura": "16/04/2026 17:30:00",
+          "dataFechamento": "17/04/2026 15:30:00",
+          "dataHoraSorteio": "17/04/2026 16:30:00",
+          "dataSorteio": "17 abr 2026",
+          "valorApostaMinima": 6.0,
+          "situacao": "NAO_INICIALIZADO",
+          "bloqueado": false,
+          "dataFinalBloqueio": "03/04/2018 15:00:00",
+          "estimativa": 0,
+          "naoInicializado": true
+        },
+        "probabilidadeDeGanhar": 2,
+        "aceitaEspelho": false,
+        "prognosticoMaximo": 60,
+        "quantidadeMinima": 6,
+        "quantidadeMaxima": 20,
+        "valoresAposta": [
+          { "valor": 6.0, "numeroPrognosticos": 6 }
+        ],
+        "concursoDisponivelSimulacao": true,
+        "concursoCanalAberto": false,
+        "situacaoConcursoCanal": "FECHADO",
+        "teimosinhas": [0, 2, 3, 4, 6, 8, 9, 12],
+        "quantidadeSurpresinhas": null,
+        "trevos": null,
+        "equipes": null,
+        "partidas": null,
+        "legendas": [],
+        "valorApostaMinima": 6.0,
+        "meses": null
+      }
+    },
+    {
+      "parametroJogo": {
+        "concurso": {
+          "numero": 1837,
+          "modalidade": "LOTOFACIL",
+          "modalidadeDetalhada": {
+            "id": 8,
+            "descricao": "Lotofácil"
+          },
+          "tipoConcurso": "ESPECIAL",
+          "dataAbertura": "15/04/2026 10:31:00",
+          "dataFechamento": "16/04/2026 16:00:00",
+          "dataHoraSorteio": "16/04/2026 17:00:00",
+          "dataSorteio": "16 abr 2026",
+          "valorApostaMinima": 3.5,
+          "situacao": "ABERTO",
+          "bloqueado": false,
+          "dataFinalBloqueio": null,
+          "estimativa": 900000,
+          "naoInicializado": false
+        },
+        "situacaoConcursoCanal": "ABERTO",
+        "probabilidadeDeGanhar": 2,
+        "aceitaEspelho": false,
+        "prognosticoMaximo": 25,
+        "quantidadeMinima": 15,
+        "quantidadeMaxima": 20,
+        "quantidadeMinimaTrevo": null,
+        "teimosinhas": [0],
+        "valoresAposta": [
+          { "valor": 3.5, "numeroPrognosticos": 15 }
+        ],
+        "concursoDisponivelSimulacao": true,
+        "concursoCanalAberto": true,
+        "quantidadeSurpresinhas": null,
+        "trevos": null,
+        "equipes": null,
+        "partidas": null,
+        "legendas": [],
+        "valorApostaMinima": 3.5,
+        "meses": null
+      },
+      "proximoConcurso": {
+        "concurso": {
+          "numero": 1838,
+          "modalidade": "LOTOFACIL",
+          "modalidadeDetalhada": {
+            "id": 8,
+            "descricao": "Lotofácil"
+          },
+          "tipoConcurso": "NORMAL",
+          "dataAbertura": "16/04/2026 17:30:00",
+          "dataFechamento": "17/04/2026 15:30:00",
+          "dataHoraSorteio": "17/04/2026 16:30:00",
+          "dataSorteio": "17 abr 2026",
+          "valorApostaMinima": 3.5,
+          "situacao": "NAO_INICIALIZADO",
+          "bloqueado": false,
+          "dataFinalBloqueio": null,
+          "estimativa": 0,
+          "naoInicializado": true
+        },
+        "probabilidadeDeGanhar": 2,
+        "aceitaEspelho": false,
+        "prognosticoMaximo": 25,
+        "quantidadeMinima": 15,
+        "quantidadeMaxima": 20,
+        "valoresAposta": [
+          { "valor": 3.5, "numeroPrognosticos": 15 }
+        ],
+        "concursoDisponivelSimulacao": true,
+        "concursoCanalAberto": false,
+        "situacaoConcursoCanal": "FECHADO",
+        "teimosinhas": [0, 3, 6, 9, 12, 18, 24],
+        "quantidadeSurpresinhas": null,
+        "trevos": null,
+        "equipes": null,
+        "partidas": null,
+        "legendas": [],
+        "valorApostaMinima": 3.5,
+        "meses": null
+      }
+    }
+  ],
+  "dataHoraFixaParaTestes": null
+}

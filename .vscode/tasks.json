@@ -1,0 +1,14 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "run quarkus dev",
+            "command": "java",
+            "args": [
+                "-jar",
+                "target/quarkus-app/quarkus-run.jar"
+            ],
+            "problemMatcher": []
+        }
+    ],
+}

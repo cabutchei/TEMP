@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<temp:SERVICO_SAIDA xmlns:sibar="http://caixa.gov.br/sibar"
+                    xmlns:temp="http://caixa.gov.br/sispl/temporizador">
+  <sibar:HEADER>
+    <VERSAO>1</VERSAO>
+    <OPERACAO></OPERACAO>
+    <DATA_HORA>20260416120000</DATA_HORA>
+  </sibar:HEADER>
+  <COD_RETORNO>0</COD_RETORNO>
+  <ORIGEM_RETORNO>TEMP</ORIGEM_RETORNO>
+  <MSG_RETORNO>OK</MSG_RETORNO>
+  <DADOS>
+    <EVENTO CODIGO="1">
+      <TIPO_EVENTO CODIGO="13">
+        <NOME>ControlaEnvioFechamento</NOME>
+        <DESCRICAO>finalizando captacao de modalidade</DESCRICAO>
+      </TIPO_EVENTO>
+      <TIMESTAMP_LANCAMENTO>2026-04-16T12:00:00-03:00</TIMESTAMP_LANCAMENTO>
+    </EVENTO>
+  </DADOS>
+</temp:SERVICO_SAIDA>
