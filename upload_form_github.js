@@ -49,7 +49,7 @@
     "box-shadow:0 8px 30px rgba(0,0,0,.45)"
   ].join(";");
 
-  const title = el("div", { textContent: "GitHub Upload Test Panel" });
+  const title = el("div", { textContent: "GitHub File Upload Test Panel" });
   title.style.cssText = "font-weight:bold;margin-bottom:12px;font-size:13px;";
 
   const tokenInput = el("input", {
@@ -62,6 +62,12 @@
     value: "upload from browser form",
     placeholder: "Commit message"
   });
+
+  const modeSelect = el("select", {}, [
+    el("option", { value: "upsert", textContent: "Create or update" }),
+    el("option", { value: "create", textContent: "Create new files only" }),
+    el("option", { value: "update", textContent: "Update existing files only" })
+  ]);
 
   const branchInput = el("input", {
     value: "",
@@ -78,7 +84,7 @@
   const fileInfo = el("div", { textContent: "No file selected" });
   const output = el("pre", { textContent: "Ready." });
 
-  for (const input of [tokenInput, commitMessageInput, branchInput, repoPathInput, fileInput]) {
+  for (const input of [tokenInput, commitMessageInput, modeSelect, branchInput, repoPathInput, fileInput]) {
     input.style.cssText =
       "display:block;width:100%;margin:0 0 8px 0;padding:8px;box-sizing:border-box;background:#1b1b1b;color:#eee;border:1px solid #555;border-radius:6px;";
   }
@@ -99,6 +105,49 @@
     const trimmed = path.trim();
     if (!trimmed) return "";
     return trimmed.replace(/^\/+/, "").replace(/\/+$/, "");
+  }
+
+  function encodeContentPath(path) {
+    return path
+      .split("/")
+      .map(encodeURIComponent)
+      .join("/");
+  }
+
+  function buildContentUrl(targetFilepath, branch) {
+    const encodedPath = encodeContentPath(targetFilepath);
+    const baseUrl = `${GITHUB_API_BASE}/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${encodedPath}`;
+    return branch ? `${baseUrl}?ref=${encodeURIComponent(branch)}` : baseUrl;
+  }
+
+  async function getExistingFileSha(token, targetFilepath, branch) {
+    const response = await fetch(buildContentUrl(targetFilepath, branch), {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: "application/vnd.github+json"
+      }
+    });
+
+    const responseText = await response.text();
+    let responseBody;
+    try {
+      responseBody = JSON.parse(responseText);
+    } catch {
+      responseBody = responseText;
+    }
+
+    if (response.status === 404) {
+      return { exists: false, response: responseBody };
+    }
+    if (!response.ok) {
+      throw new Error(`Failed to check ${targetFilepath}: ${response.status} ${responseText}`);
+    }
+    if (Array.isArray(responseBody) || !responseBody?.sha) {
+      throw new Error(`${targetFilepath} exists, but it is not a file response with a sha`);
+    }
+
+    return { exists: true, sha: responseBody.sha, response: responseBody };
   }
 
   function updateFileInfo() {
@@ -128,6 +177,7 @@
   async function uploadToGithub() {
     const token = tokenInput.value.trim();
     const commitMessage = commitMessageInput.value.trim();
+    const mode = modeSelect.value;
     const branch = branchInput.value.trim();
     const repoPath = normalizeRepoPath(repoPathInput.value);
     const files = Array.from(fileInput.files || []);
@@ -146,16 +196,35 @@
     for (const file of files) {
       const content = await fileToBase64(file);
       const targetFilepath = repoPath ? `${repoPath}/${file.name}` : file.name;
-      const url = `${GITHUB_API_BASE}/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${targetFilepath
-        .split("/")
-        .map(encodeURIComponent)
-        .join("/")}`;
+      const existingFile = mode === "create"
+        ? { exists: false, sha: null }
+        : await getExistingFileSha(token, targetFilepath, branch);
+
+      if (mode === "update" && !existingFile.exists) {
+        results.push({
+          request: {
+            targetFilepath,
+            mode
+          },
+          response: {
+            ok: false,
+            status: 404,
+            body: `Cannot update ${targetFilepath}; the file does not exist.`
+          }
+        });
+        continue;
+      }
+
+      const url = `${GITHUB_API_BASE}/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${encodeContentPath(targetFilepath)}`;
       const payload = {
         message: commitMessage,
         content
       };
       if (branch) {
         payload.branch = branch;
+      }
+      if (existingFile.exists) {
+        payload.sha = existingFile.sha;
       }
 
       const response = await fetch(url, {
@@ -185,7 +254,9 @@
           },
           body: {
             message: payload.message,
+            mode,
             branch: payload.branch || null,
+            sha: payload.sha || null,
             contentLength: payload.content.length,
             targetFilepath
           }
@@ -232,6 +303,8 @@
     tokenInput,
     el("div", { textContent: "Commit Message" }),
     commitMessageInput,
+    el("div", { textContent: "Upload Mode" }),
+    modeSelect,
     el("div", { textContent: "Branch" }),
     branchInput,
     el("div", { textContent: "Repo Path Prefix" }),
