@@ -1,0 +1,949 @@
+diff --git a/mocks/requests/debug.compra-flow.rest b/mocks/requests/debug.compra-flow.rest
+new file mode 100644
+index 00000000..bedaee8a
+--- /dev/null
++++ b/mocks/requests/debug.compra-flow.rest
+@@ -0,0 +1,19 @@
++### Debug compra flow
++### Start Quarkus with DEBUG_COMPRA_FLOW_ENABLED=true
++### Keep the integration queue configured if you want the real sincronizar-compra publications
++
++POST http://localhost:8080/debug/compra-flow/executar
++Accept: application/json
++Content-Type: application/json
++
++{
++  "subcanal": 1,
++  "cpf": "12345678901",
++  "meioPagamento": 1,
++  "paymentMethodId": "visa",
++  "token": "debug-token",
++  "salvarCarrinhoFavorito": false,
++  "nomeCarrinhoFavorito": "Carrinho Favorito Debug",
++  "situacaoPagamento": "APROVADO",
++  "situacaoCompraRegistrada": 13
++}
+diff --git a/pom.xml b/pom.xml
+index f0aea0f7..1d1b1fc3 100644
+--- a/pom.xml
++++ b/pom.xml
+@@ -214,6 +214,11 @@
+             <groupId>com.fasterxml.jackson.datatype</groupId>
+             <artifactId>jackson-datatype-jsr310</artifactId>
+         </dependency>
++        <dependency>
++            <groupId>net.bytebuddy</groupId>
++            <artifactId>byte-buddy</artifactId>
++            <version>1.17.6</version>
++        </dependency>
+ 
+     </dependencies>
+ 
+diff --git a/scripts/debug/delete_compra_flow.sh b/scripts/debug/delete_compra_flow.sh
+new file mode 100644
+index 00000000..70cc4c0c
+--- /dev/null
++++ b/scripts/debug/delete_compra_flow.sh
+@@ -0,0 +1,109 @@
++#!/usr/bin/env bash
++set -euo pipefail
++
++usage() {
++  cat <<'EOF'
++Usage:
++  scripts/debug/delete_compra_flow.sh --container <container> --database <database> --password <password> [--user sa] (--compra-id <id> | --id-externo <id>)
++
++Examples:
++  scripts/debug/delete_compra_flow.sh --container sqlserver --database SILCE --password 'Secret123' --compra-id 12345
++  scripts/debug/delete_compra_flow.sh --container sqlserver --database SILCE --password 'Secret123' --id-externo N000000000000000000000000000000001
++
++Notes:
++  - The script runs sqlcmd inside the SQL Server container.
++  - It deletes rows in FK-safe order and only removes the apostador, pagamento, estorno, combo, and bolao if they are no longer referenced.
++EOF
++}
++
++container=""
++database=""
++user="sa"
++password=""
++compra_id=""
++id_externo=""
++
++while [[ $# -gt 0 ]]; do
++  case "$1" in
++    --container)
++      container="${2:-}"
++      shift 2
++      ;;
++    --database)
++      database="${2:-}"
++      shift 2
++      ;;
++    --user)
++      user="${2:-}"
++      shift 2
++      ;;
++    --password)
++      password="${2:-}"
++      shift 2
++      ;;
++    --compra-id)
++      compra_id="${2:-}"
++      shift 2
++      ;;
++    --id-externo)
++      id_externo="${2:-}"
++      shift 2
++      ;;
++    -h|--help)
++      usage
++      exit 0
++      ;;
++    *)
++      echo "Unknown argument: $1" >&2
++      usage >&2
++      exit 1
++      ;;
++  esac
++done
++
++if [[ -z "$container" || -z "$database" || -z "$password" ]]; then
++  usage >&2
++  exit 1
++fi
++
++if [[ -n "$compra_id" && -n "$id_externo" ]]; then
++  echo "Use only one target: --compra-id or --id-externo." >&2
++  exit 1
++fi
++
++if [[ -z "$compra_id" && -z "$id_externo" ]]; then
++  echo "You must provide --compra-id or --id-externo." >&2
++  exit 1
++fi
++
++script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
++sql_file="${script_dir}/delete_compra_flow.sql"
++
++if [[ ! -f "$sql_file" ]]; then
++  echo "SQL file not found: $sql_file" >&2
++  exit 1
++fi
++
++docker exec -i \
++  -e MSSQL_DEBUG_USER="$user" \
++  -e MSSQL_DEBUG_PASSWORD="$password" \
++  -e MSSQL_DEBUG_DATABASE="$database" \
++  -e MSSQL_DEBUG_COMPRA_ID="$compra_id" \
++  -e MSSQL_DEBUG_ID_EXTERNO="$id_externo" \
++  "$container" /bin/bash -lc '
++set -euo pipefail
++if [[ -x /opt/mssql-tools18/bin/sqlcmd ]]; then
++  SQLCMD_BIN=/opt/mssql-tools18/bin/sqlcmd
++elif [[ -x /opt/mssql-tools/bin/sqlcmd ]]; then
++  SQLCMD_BIN=/opt/mssql-tools/bin/sqlcmd
++else
++  echo "sqlcmd not found inside container" >&2
++  exit 1
++fi
++
++"$SQLCMD_BIN" -C -b -S localhost \
++  -U "$MSSQL_DEBUG_USER" \
++  -P "$MSSQL_DEBUG_PASSWORD" \
++  -d "$MSSQL_DEBUG_DATABASE" \
++  -v COMPRA_ID="$MSSQL_DEBUG_COMPRA_ID" ID_EXTERNO="$MSSQL_DEBUG_ID_EXTERNO"
++' < "$sql_file"
+diff --git a/scripts/debug/delete_compra_flow.sql b/scripts/debug/delete_compra_flow.sql
+new file mode 100644
+index 00000000..568ec6cd
+--- /dev/null
++++ b/scripts/debug/delete_compra_flow.sql
+@@ -0,0 +1,185 @@
++SET NOCOUNT ON;
++
++IF ('$(COMPRA_ID)' = '' AND '$(ID_EXTERNO)' = '')
++BEGIN
++    RAISERROR('Informe COMPRA_ID ou ID_EXTERNO.', 16, 1);
++    RETURN;
++END;
++
++DECLARE @CompraIdInput BIGINT = NULL;
++DECLARE @IdExternoInput NVARCHAR(100) = NULLIF('$(ID_EXTERNO)', '');
++
++IF ('$(COMPRA_ID)' <> '')
++BEGIN
++    SET @CompraIdInput = TRY_CAST('$(COMPRA_ID)' AS BIGINT);
++
++    IF (@CompraIdInput IS NULL)
++    BEGIN
++        RAISERROR('COMPRA_ID invalido.', 16, 1);
++        RETURN;
++    END;
++END;
++
++DECLARE @CompraIds TABLE (id BIGINT PRIMARY KEY);
++DECLARE @PagamentoIds TABLE (id BIGINT PRIMARY KEY);
++DECLARE @EstornoIds TABLE (id BIGINT PRIMARY KEY);
++DECLARE @ItemIds TABLE (id BIGINT PRIMARY KEY);
++DECLARE @ApostaIds TABLE (id BIGINT PRIMARY KEY);
++DECLARE @ComboIds TABLE (id BIGINT PRIMARY KEY);
++DECLARE @ReservaIds TABLE (id BIGINT PRIMARY KEY);
++DECLARE @BolaoIds TABLE (id BIGINT PRIMARY KEY);
++DECLARE @ApostadorIds TABLE (id BIGINT PRIMARY KEY);
++
++INSERT INTO @CompraIds (id)
++SELECT c.NU_COMPRA
++FROM LCE._COMPRA c
++WHERE (@CompraIdInput IS NOT NULL AND c.NU_COMPRA = @CompraIdInput)
++   OR (@IdExternoInput IS NOT NULL AND c.NU_ID_EXTERNO = @IdExternoInput);
++
++IF NOT EXISTS (SELECT 1 FROM @CompraIds)
++BEGIN
++    RAISERROR('Nenhuma compra encontrada para os parametros informados.', 16, 1);
++    RETURN;
++END;
++
++INSERT INTO @PagamentoIds (id)
++SELECT DISTINCT c.NU_PAGAMENTO
++FROM LCE._COMPRA c
++JOIN @CompraIds ci ON ci.id = c.NU_COMPRA
++WHERE c.NU_PAGAMENTO IS NOT NULL;
++
++INSERT INTO @EstornoIds (id)
++SELECT DISTINCT p.NU_ESTORNO
++FROM LCE.PAGAMENTO p
++JOIN @PagamentoIds pi ON pi.id = p.NU_PAGAMENTO
++WHERE p.NU_ESTORNO IS NOT NULL;
++
++INSERT INTO @ItemIds (id)
++SELECT ic.NU_ITEM_COMPRAVEL
++FROM LCE._ITEM_COMPRAVEL ic
++JOIN @CompraIds ci ON ci.id = ic.NU_COMPRA;
++
++INSERT INTO @ApostaIds (id)
++SELECT DISTINCT ic.NU_APOSTA
++FROM LCE._ITEM_COMPRAVEL ic
++JOIN @CompraIds ci ON ci.id = ic.NU_COMPRA
++WHERE ic.NU_APOSTA IS NOT NULL;
++
++INSERT INTO @ComboIds (id)
++SELECT DISTINCT ai.NU_COMBO
++FROM LCE._APOSTA_INDIVIDUAL ai
++JOIN @ApostaIds ap ON ap.id = ai.NU_APOSTA
++WHERE ai.NU_COMBO IS NOT NULL;
++
++INSERT INTO @ReservaIds (id)
++SELECT DISTINCT ic.NU_RESERVA_COTA_BOLAO
++FROM LCE._ITEM_COMPRAVEL ic
++JOIN @CompraIds ci ON ci.id = ic.NU_COMPRA
++WHERE ic.NU_RESERVA_COTA_BOLAO IS NOT NULL;
++
++INSERT INTO @BolaoIds (id)
++SELECT DISTINCT r.NU_BOLAO
++FROM LCE._RESERVA_COTA_BOLAO r
++JOIN @ReservaIds ri ON ri.id = r.NU_RESERVA_COTA_BOLAO
++WHERE r.NU_BOLAO IS NOT NULL;
++
++INSERT INTO @ApostadorIds (id)
++SELECT DISTINCT c.NU_APOSTADOR
++FROM LCE._COMPRA c
++JOIN @CompraIds ci ON ci.id = c.NU_COMPRA
++WHERE c.NU_APOSTADOR IS NOT NULL;
++
++SELECT 'compra' AS tipo, COUNT(*) AS quantidade FROM @CompraIds
++UNION ALL
++SELECT 'pagamento', COUNT(*) FROM @PagamentoIds
++UNION ALL
++SELECT 'estorno', COUNT(*) FROM @EstornoIds
++UNION ALL
++SELECT 'item_compravel', COUNT(*) FROM @ItemIds
++UNION ALL
++SELECT 'aposta_individual', COUNT(*) FROM @ApostaIds
++UNION ALL
++SELECT 'combo', COUNT(*) FROM @ComboIds
++UNION ALL
++SELECT 'reserva_cota_bolao', COUNT(*) FROM @ReservaIds
++UNION ALL
++SELECT 'bolao', COUNT(*) FROM @BolaoIds
++UNION ALL
++SELECT 'apostador_candidato', COUNT(*) FROM @ApostadorIds;
++
++BEGIN TRANSACTION;
++
++BEGIN TRY
++    DELETE ic
++    FROM LCE._ITEM_COMPRAVEL ic
++    JOIN @ItemIds ids ON ids.id = ic.NU_ITEM_COMPRAVEL;
++
++    DELETE c
++    FROM LCE._COMPRA c
++    JOIN @CompraIds ids ON ids.id = c.NU_COMPRA;
++
++    DELETE ai
++    FROM LCE._APOSTA_INDIVIDUAL ai
++    JOIN @ApostaIds ids ON ids.id = ai.NU_APOSTA;
++
++    DELETE cb
++    FROM LCE.COMBO cb
++    JOIN @ComboIds ids ON ids.id = cb.NU_COMBO
++    WHERE NOT EXISTS (
++        SELECT 1
++        FROM LCE._APOSTA_INDIVIDUAL ai
++        WHERE ai.NU_COMBO = cb.NU_COMBO
++    );
++
++    DELETE r
++    FROM LCE._RESERVA_COTA_BOLAO r
++    JOIN @ReservaIds ids ON ids.id = r.NU_RESERVA_COTA_BOLAO;
++
++    DELETE b
++    FROM LCE._BOLAO b
++    JOIN @BolaoIds ids ON ids.id = b.NU_BOLAO
++    WHERE NOT EXISTS (
++        SELECT 1
++        FROM LCE._RESERVA_COTA_BOLAO r
++        WHERE r.NU_BOLAO = b.NU_BOLAO
++    );
++
++    DELETE p
++    FROM LCE.PAGAMENTO p
++    JOIN @PagamentoIds ids ON ids.id = p.NU_PAGAMENTO
++    WHERE NOT EXISTS (
++        SELECT 1
++        FROM LCE._COMPRA c
++        WHERE c.NU_PAGAMENTO = p.NU_PAGAMENTO
++    );
++
++    DELETE e
++    FROM LCE.ESTORNO e
++    JOIN @EstornoIds ids ON ids.id = e.NU_ESTORNO
++    WHERE NOT EXISTS (
++        SELECT 1
++        FROM LCE.PAGAMENTO p
++        WHERE p.NU_ESTORNO = e.NU_ESTORNO
++    );
++
++    DELETE a
++    FROM LCE._APOSTADOR a
++    JOIN @ApostadorIds ids ON ids.id = a.NU_APOSTADOR
++    WHERE NOT EXISTS (
++        SELECT 1
++        FROM LCE._COMPRA c
++        WHERE c.NU_APOSTADOR = a.NU_APOSTADOR
++    );
++
++    COMMIT TRANSACTION;
++END TRY
++BEGIN CATCH
++    IF @@TRANCOUNT > 0
++    BEGIN
++        ROLLBACK TRANSACTION;
++    END;
++
++    THROW;
++END CATCH;
++
++SELECT 'Cleanup concluido.' AS resultado;
+diff --git a/src/main/java/br/caixa/loterias/resources/debug/CompraFlowDebugResource.java b/src/main/java/br/caixa/loterias/resources/debug/CompraFlowDebugResource.java
+new file mode 100644
+index 00000000..984d7647
+--- /dev/null
++++ b/src/main/java/br/caixa/loterias/resources/debug/CompraFlowDebugResource.java
+@@ -0,0 +1,403 @@
++package br.caixa.loterias.resources.debug;
++
++import java.lang.reflect.InvocationHandler;
++import java.math.BigDecimal;
++import java.time.LocalDateTime;
++import java.util.EnumMap;
++import java.util.List;
++import java.util.Map;
++
++import org.eclipse.microprofile.openapi.annotations.tags.Tag;
++
++import br.caixa.loterias.backends.apostador.SilceApostadorApiClient;
++import br.caixa.loterias.backends.carrinho.SilceCarrinhoApiClient;
++import br.caixa.loterias.backends.carrinho.model.postrecuperarcarrinho.SilceCarrinhoApiGetRecuperarCarrinhoResponse;
++import br.caixa.loterias.backends.parametros.SilceParametrosApiClient;
++import br.caixa.loterias.backends.parametros.model.getparametrosgestao.SilceParametrosApiGetGestaoParametrosResponse;
++import br.caixa.loterias.backends.parametros.model.getpercentuaisvenda.SilceParametrosApiGetPercentuaisVendaResponse;
++import br.caixa.loterias.backends.parametros.model.getvalorapostascompradas.SilceParametrosApiGetValoresApostasCompradas;
++import br.caixa.loterias.messaging.producer.PagamentoSolicitarProducer;
++import br.caixa.loterias.messaging.producer.RegistrarCompraProducer;
++import br.caixa.loterias.messaging.producer.SolicitarEstornoProducer;
++import br.caixa.loterias.model.dto.apostador.InformacoesApostadorDTO;
++import br.caixa.loterias.model.dto.silcecarrinho.CarrinhoApostaIndividualDTO;
++import br.caixa.loterias.model.dto.silcecarrinho.CarrinhoBolaoDTO;
++import br.caixa.loterias.model.dto.silcecarrinho.CarrinhoComboDTO;
++import br.caixa.loterias.model.dto.silcecarrinho.CarrinhoLotericaDTO;
++import br.caixa.loterias.model.dto.silcecarrinho.CarrinhoReservaCotaDTO;
++import br.caixa.loterias.model.entity.Compra;
++import br.caixa.loterias.model.entity.ItemCompravel;
++import br.caixa.loterias.model.enums.parametropagamento.ParametroPagamentoEnum;
++import br.caixa.loterias.model.enums.situacaocompra.SituacaoCompraEnum;
++import br.caixa.loterias.model.enums.tipocombo.TipoComboEnum;
++import br.caixa.loterias.model.message.CompraRegistradaMessage;
++import br.caixa.loterias.model.message.PagamentoProcessadoMessage;
++import br.caixa.loterias.orchestrator.EfetivarCompraFlow;
++import br.caixa.loterias.repository.CompraRepository;
++import br.caixa.loterias.resources.compra.model.postefetivarcompra.CompraResourcePostEfetivarCompraRequest;
++import br.caixa.loterias.resources.debug.model.CompraFlowDebugRequest;
++import br.caixa.loterias.resources.debug.model.CompraFlowDebugResponse;
++import br.caixa.loterias.resources.debug.support.ByteBuddyRuntimeMocks;
++import br.caixa.loterias.services.SilceParametrosService;
++import br.caixa.loterias.services.apostador.VerificarApostadorService;
++import br.caixa.loterias.services.carrinho.DeletarCarrinhoService;
++import br.caixa.loterias.services.carrinho.DevolverApostasCarrinhoService;
++import br.caixa.loterias.services.carrinho.RecuperarCarrinhoService;
++import br.caixa.loterias.services.carrinho.SalvarCarrinhoFavoritoService;
++import br.caixa.loterias.services.carrinho.ValidarCarrinhoService;
++import br.caixa.loterias.services.compra.CompraRegistradaService;
++import br.caixa.loterias.services.pagamento.PagamentoProcessadoService;
++import br.caixa.loterias.services.percentuaisvenda.PercentuaisVendaService;
++import io.quarkus.arc.properties.IfBuildProperty;
++import jakarta.inject.Inject;
++import jakarta.ws.rs.Consumes;
++import jakarta.ws.rs.POST;
++import jakarta.ws.rs.Path;
++import jakarta.ws.rs.Produces;
++import jakarta.ws.rs.core.MediaType;
++import jakarta.ws.rs.core.Response;
++
++@Path("/debug/compra-flow")
++@Tag(name = "debug")
++@IfBuildProperty(name = "app.debug.compra-flow.enabled", stringValue = "true")
++public class CompraFlowDebugResource {
++
++    private static final BigDecimal PERCENTUAL_COMISSAO = new BigDecimal("5.00");
++    private static final BigDecimal PERCENTUAL_CUSTEIO = new BigDecimal("2.00");
++
++    @Inject
++    EfetivarCompraFlow efetivarCompraFlow;
++
++    @Inject
++    PagamentoProcessadoService pagamentoProcessadoService;
++
++    @Inject
++    CompraRegistradaService compraRegistradaService;
++
++    @Inject
++    CompraRepository compraRepository;
++
++    @Inject
++    RecuperarCarrinhoService recuperarCarrinhoService;
++
++    @Inject
++    SalvarCarrinhoFavoritoService salvarCarrinhoFavoritoService;
++
++    @Inject
++    DeletarCarrinhoService deletarCarrinhoService;
++
++    @Inject
++    DevolverApostasCarrinhoService devolverApostasCarrinhoService;
++
++    @Inject
++    VerificarApostadorService verificarApostadorService;
++
++    @Inject
++    ValidarCarrinhoService validarCarrinhoService;
++
++    @Inject
++    SilceParametrosService silceParametrosService;
++
++    @Inject
++    PercentuaisVendaService percentuaisVendaService;
++
++    @Inject
++    br.caixa.loterias.services.pagamento.SolicitarPagamentoService solicitarPagamentoService;
++
++    @Inject
++    br.caixa.loterias.services.compra.RegistrarCompraService registrarCompraService;
++
++    @Inject
++    br.caixa.loterias.services.estorno.SolicitarEstornoService solicitarEstornoService;
++
++    @POST
++    @Path("/executar")
++    @Consumes(MediaType.APPLICATION_JSON)
++    @Produces(MediaType.APPLICATION_JSON)
++    public synchronized Response executarFluxoCompleto(CompraFlowDebugRequest request) {
++        CompraFlowDebugRequest payload = request == null ? new CompraFlowDebugRequest() : request;
++        CompraFlowDebugResponse response = new CompraFlowDebugResponse();
++        SilceCarrinhoApiGetRecuperarCarrinhoResponse carrinhoFixture = criarCarrinhoFixture();
++
++        response.setApostasIndividuaisCarrinho(carrinhoFixture.getApostasIndividuais().size());
++        response.setCombosCarrinho(carrinhoFixture.getCombos().size());
++        response.setReservasCarrinho(carrinhoFixture.getReservasCotas().size());
++
++        try (ByteBuddyRuntimeMocks.FieldOverrideSession overrides = ByteBuddyRuntimeMocks.session()) {
++            configurarMocks(overrides, carrinhoFixture, response);
++
++            Compra compra = efetivarCompraFlow.efetivar(
++                    payload.getSubcanal(),
++                    payload.getCpf(),
++                    criarRequestEfetivacao(payload)
++            );
++            response.getEtapasExecutadas().add("EfetivarCompraFlow.efetivar");
++
++            PagamentoProcessadoMessage pagamentoProcessadoMessage = criarPagamentoProcessadoMessage(compra, payload);
++            pagamentoProcessadoService.processarPagamentoProcessado(pagamentoProcessadoMessage);
++            response.getEtapasExecutadas().add("PagamentoProcessadoService.processarPagamentoProcessado");
++
++            if (payload.getSituacaoPagamento() == br.caixa.loterias.model.enums.situacaopagamento.SituacaoPagamentoEnum.APROVADO) {
++                CompraRegistradaMessage compraRegistradaMessage = criarCompraRegistradaMessage(compra, payload);
++                compraRegistradaService.processar(compraRegistradaMessage);
++                response.getEtapasExecutadas().add("CompraRegistradaService.processar");
++            }
++
++            Compra compraAtualizada = compraRepository.findById(compra.getId());
++            preencherResposta(response, compraAtualizada);
++
++            return Response.ok(response).build();
++        }
++    }
++
++    private void configurarMocks(
++            ByteBuddyRuntimeMocks.FieldOverrideSession overrides,
++            SilceCarrinhoApiGetRecuperarCarrinhoResponse carrinhoFixture,
++            CompraFlowDebugResponse response) {
++
++        SilceCarrinhoApiClient carrinhoMock = ByteBuddyRuntimeMocks.createInterfaceMock(
++                SilceCarrinhoApiClient.class,
++                carrinhoHandler(carrinhoFixture, response)
++        );
++
++        SilceApostadorApiClient apostadorMock = ByteBuddyRuntimeMocks.createInterfaceMock(
++                SilceApostadorApiClient.class,
++                apostadorHandler()
++        );
++
++        SilceParametrosApiClient parametrosMock = ByteBuddyRuntimeMocks.createInterfaceMock(
++                SilceParametrosApiClient.class,
++                parametrosHandler()
++        );
++
++        PagamentoSolicitarProducer pagamentoSolicitarProducerMock = ByteBuddyRuntimeMocks.createSubclassMock(
++                PagamentoSolicitarProducer.class,
++                "publish",
++                innocuousProducerHandler("PagamentoSolicitarProducer.publish", response)
++        );
++
++        RegistrarCompraProducer registrarCompraProducerMock = ByteBuddyRuntimeMocks.createSubclassMock(
++                RegistrarCompraProducer.class,
++                "publish",
++                innocuousProducerHandler("RegistrarCompraProducer.publish", response)
++        );
++
++        SolicitarEstornoProducer solicitarEstornoProducerMock = ByteBuddyRuntimeMocks.createSubclassMock(
++                SolicitarEstornoProducer.class,
++                "publish",
++                innocuousProducerHandler("SolicitarEstornoProducer.publish", response)
++        );
++
++        overrides.replaceField(recuperarCarrinhoService, "silceCarrinhoApiClient", carrinhoMock);
++        overrides.replaceField(salvarCarrinhoFavoritoService, "silceCarrinhoApiClient", carrinhoMock);
++        overrides.replaceField(deletarCarrinhoService, "silceCarrinhoApiClient", carrinhoMock);
++        overrides.replaceField(devolverApostasCarrinhoService, "silceCarrinhoApiClient", carrinhoMock);
++
++        overrides.replaceField(verificarApostadorService, "silceApostadorApiClient", apostadorMock);
++        overrides.replaceField(validarCarrinhoService, "silceApostadorApiClient", apostadorMock);
++
++        overrides.replaceField(verificarApostadorService, "silceParametrosApiClient", parametrosMock);
++        overrides.replaceField(silceParametrosService, "silceParametrosClient", parametrosMock);
++        overrides.replaceField(percentuaisVendaService, "silceParametrosApiClient", parametrosMock);
++
++        overrides.replaceField(solicitarPagamentoService, "pagamentoSolicitarProducer", pagamentoSolicitarProducerMock);
++        overrides.replaceField(registrarCompraService, "registrarCompraProducer", registrarCompraProducerMock);
++        overrides.replaceField(solicitarEstornoService, "solicitarEstornoProducer", solicitarEstornoProducerMock);
++    }
++
++    private InvocationHandler carrinhoHandler(
++            SilceCarrinhoApiGetRecuperarCarrinhoResponse carrinhoFixture,
++            CompraFlowDebugResponse response) {
++        return (proxy, method, args) -> switch (method.getName()) {
++            case "recuperarCarrinho" -> carrinhoFixture;
++            case "salvarCarrinhoFavorito" -> {
++                response.getMensagensNeutralizadas().add("SilceCarrinhoApiClient.salvarCarrinhoFavorito");
++                yield null;
++            }
++            case "deletarCarrinho" -> {
++                response.getMensagensNeutralizadas().add("SilceCarrinhoApiClient.deletarCarrinho");
++                yield null;
++            }
++            case "devolverApostas" -> {
++                response.getMensagensNeutralizadas().add("SilceCarrinhoApiClient.devolverApostas");
++                yield null;
++            }
++            default -> throw new UnsupportedOperationException("Metodo nao suportado: " + method.getName());
++        };
++    }
++
++    private InvocationHandler apostadorHandler() {
++        return (proxy, method, args) -> {
++            if (!"getInformacoesApostador".equals(method.getName())) {
++                throw new UnsupportedOperationException("Metodo nao suportado: " + method.getName());
++            }
++
++            InformacoesApostadorDTO informacoes = new InformacoesApostadorDTO();
++            informacoes.setBloqueado(false);
++            informacoes.setLimiteDiario(1_000_000d);
++            informacoes.setTermoAdesaoAceito(99);
++            informacoes.setSituacaoApostador(0);
++            return informacoes;
++        };
++    }
++
++    private InvocationHandler parametrosHandler() {
++        return (proxy, method, args) -> switch (method.getName()) {
++            case "getParametrosGestao" -> criarParametrosGestao();
++            case "getValorApostasCompradas" -> criarValoresApostasCompradas();
++            case "getPercentuaisVenda" -> criarPercentuaisVenda();
++            default -> throw new UnsupportedOperationException("Metodo nao suportado: " + method.getName());
++        };
++    }
++
++    private InvocationHandler innocuousProducerHandler(String nome, CompraFlowDebugResponse response) {
++        return (proxy, method, args) -> {
++            response.getMensagensNeutralizadas().add(nome);
++            return null;
++        };
++    }
++
++    private CompraResourcePostEfetivarCompraRequest criarRequestEfetivacao(CompraFlowDebugRequest payload) {
++        CompraResourcePostEfetivarCompraRequest request = new CompraResourcePostEfetivarCompraRequest();
++        request.setMeioPagamento(payload.getMeioPagamento());
++        request.setSalvarCarrinhoFavorito(payload.getSalvarCarrinhoFavorito());
++        request.setNomeCarrinhoFavorito(payload.getNomeCarrinhoFavorito());
++
++        Map<ParametroPagamentoEnum, String> parametrosPagamento = new EnumMap<>(ParametroPagamentoEnum.class);
++        parametrosPagamento.put(ParametroPagamentoEnum.PAYMENT_METHOD_ID, payload.getPaymentMethodId());
++        parametrosPagamento.put(ParametroPagamentoEnum.TOKEN, payload.getToken());
++        parametrosPagamento.put(ParametroPagamentoEnum.SAVE_CARD, Boolean.FALSE.toString());
++        parametrosPagamento.put(ParametroPagamentoEnum.SAVED_CARD, Boolean.FALSE.toString());
++        request.setParametrosPagamento(parametrosPagamento);
++
++        return request;
++    }
++
++    private PagamentoProcessadoMessage criarPagamentoProcessadoMessage(Compra compra, CompraFlowDebugRequest payload) {
++        return new PagamentoProcessadoMessage(
++                compra.getId().toString(),
++                compra.getPagamento().getMeioPagamento().name(),
++                compra.getIdExterno(),
++                "txn-" + compra.getId(),
++                payload.getSituacaoPagamento(),
++                payload.getSituacaoPagamento().name(),
++                compra.getValorTotal().doubleValue(),
++                0d,
++                false,
++                compra.getApostador().getCpf()
++        );
++    }
++
++    private CompraRegistradaMessage criarCompraRegistradaMessage(Compra compra, CompraFlowDebugRequest payload) {
++        return new CompraRegistradaMessage(compra.getId(), payload.getSituacaoCompraRegistrada());
++    }
++
++    private void preencherResposta(CompraFlowDebugResponse response, Compra compra) {
++        response.setCompraId(compra.getId());
++        response.setIdExterno(compra.getIdExterno());
++        response.setSituacaoCompraFinal(compra.getSituacao().name());
++        response.setSituacaoPagamentoFinal(compra.getPagamento().getSituacao().name());
++
++        List<ItemCompravel> itens = compra.getItensCompraveis();
++        response.setItensCompraveisPersistidos(itens.size());
++        response.setItensApostaPersistidos((int) itens.stream().filter(ItemCompravel::isAposta).count());
++        response.setItensReservaPersistidos((int) itens.stream().filter(ItemCompravel::isReservaCota).count());
++    }
++
++    private SilceCarrinhoApiGetRecuperarCarrinhoResponse criarCarrinhoFixture() {
++        SilceCarrinhoApiGetRecuperarCarrinhoResponse response = new SilceCarrinhoApiGetRecuperarCarrinhoResponse();
++        response.setId(9999L);
++        response.setApostasIndividuais(List.of(
++                criarApostaIndividual(101L, 2L, "01,02,03,04,05,06", 5.0, 3001L),
++                criarApostaIndividual(102L, 3L, "11,12,13,14,15", 2.5, 4001L),
++                criarApostaIndividual(103L, 8L, "01,02,03,04,05,06,07,08,09,10,11,12,13,14,15", 3.0, 5001L),
++                criarApostaIndividual(104L, 20L, "01,02,03,04,05,06,07/ABC", 3.5, 6001L)
++        ));
++        response.setCombos(List.of(criarCombo()));
++        response.setReservasCotas(List.of(criarReserva()));
++        response.setValorTotal(35.5);
++        return response;
++    }
++
++    private CarrinhoApostaIndividualDTO criarApostaIndividual(
++            Long id,
++            Long modalidade,
++            String prognosticos,
++            Double valor,
++            Long concursoAlvo) {
++        CarrinhoApostaIndividualDTO aposta = new CarrinhoApostaIndividualDTO();
++        aposta.setId(id);
++        aposta.setIdModalidade(modalidade);
++        aposta.setTipoConcurso(1L);
++        aposta.setPrognosticos(prognosticos);
++        aposta.setIndicadorSurpresinha(false);
++        aposta.setValor(valor);
++        aposta.setConcursoAlvo(concursoAlvo);
++        aposta.setQuantidadeTeimosinhas(0L);
++        aposta.setVinculoEspelho(null);
++        aposta.setTroca(false);
++        aposta.setEspecialInclusoTeimosinha(false);
++        return aposta;
++    }
++
++    private CarrinhoComboDTO criarCombo() {
++        CarrinhoComboDTO combo = new CarrinhoComboDTO();
++        combo.setId(201L);
++        combo.setTipoCombo(TipoComboEnum.SORTE_FACIL);
++        combo.setApostas(List.of(
++                criarApostaIndividual(202L, 2L, "07,08,09,10,11,12", 5.0, 7001L),
++                criarApostaIndividual(203L, 11L, "01,02,03,04,05,06,07/CAIXA", 4.0, 8001L)
++        ));
++        return combo;
++    }
++
++    private CarrinhoReservaCotaDTO criarReserva() {
++        CarrinhoBolaoDTO bolao = new CarrinhoBolaoDTO();
++        bolao.setCodigoBolaoReserva("BOLAO-DEBUG-001");
++        bolao.setQtdCotaTotalBolao(100L);
++
++        CarrinhoLotericaDTO loterica = new CarrinhoLotericaDTO();
++        loterica.setId(10L);
++        loterica.setIdMunicipio(3550308L);
++        loterica.setIdUF(35L);
++        loterica.setNumeroTerminalLoterico(777L);
++
++        CarrinhoReservaCotaDTO reserva = new CarrinhoReservaCotaDTO();
++        reserva.setId(301L);
++        reserva.setNsbc("NSBC-DEBUG-001");
++        reserva.setNsuTransacaoSilce(900001L);
++        reserva.setCodigoCotaMarketplace("COTA-DEBUG-001");
++        reserva.setSituacaoReserva(1L);
++        reserva.setDataHoraReserva(LocalDateTime.now().minusMinutes(5).withNano(0).toString());
++        reserva.setDataHoraExpiracaoReserva(LocalDateTime.now().plusHours(2).withNano(0).toString());
++        reserva.setNumeroCotaReservada(15L);
++        reserva.setVrCotaReservada(10.0);
++        reserva.setVrTarifaServico(2.5);
++        reserva.setVrTotalCota(12.5);
++        reserva.setBolao(bolao);
++        reserva.setLoterica(loterica);
++        return reserva;
++    }
++
++    private SilceParametrosApiGetGestaoParametrosResponse criarParametrosGestao() {
++        SilceParametrosApiGetGestaoParametrosResponse response = new SilceParametrosApiGetGestaoParametrosResponse();
++        response.setTermoAdesaoVigente(1);
++        response.setTempoExpiracaoPadraoCobrancaPix(30);
++        response.setTempoExpiracaoMinimoCobrancaPix(5);
++        return response;
++    }
++
++    private SilceParametrosApiGetValoresApostasCompradas criarValoresApostasCompradas() {
++        SilceParametrosApiGetValoresApostasCompradas response = new SilceParametrosApiGetValoresApostasCompradas();
++        response.setQuantidade(0);
++        response.setValor(BigDecimal.ZERO);
++        return response;
++    }
++
++    private SilceParametrosApiGetPercentuaisVendaResponse criarPercentuaisVenda() {
++        return SilceParametrosApiGetPercentuaisVendaResponse.builder()
++                .percentualComissao(PERCENTUAL_COMISSAO)
++                .percentualCusteio(PERCENTUAL_CUSTEIO)
++                .build();
++    }
++}
+diff --git a/src/main/java/br/caixa/loterias/resources/debug/model/CompraFlowDebugRequest.java b/src/main/java/br/caixa/loterias/resources/debug/model/CompraFlowDebugRequest.java
+new file mode 100644
+index 00000000..ea729589
+--- /dev/null
++++ b/src/main/java/br/caixa/loterias/resources/debug/model/CompraFlowDebugRequest.java
+@@ -0,0 +1,22 @@
++package br.caixa.loterias.resources.debug.model;
++
++import br.caixa.loterias.model.enums.situacaocompra.SituacaoCompraEnum;
++import br.caixa.loterias.model.enums.situacaopagamento.SituacaoPagamentoEnum;
++import br.caixa.loterias.model.enums.tipomeiopagamento.MeioPagamentoEnum;
++import lombok.Getter;
++import lombok.Setter;
++
++@Getter
++@Setter
++public class CompraFlowDebugRequest {
++
++    private Integer subcanal = 1;
++    private String cpf = "12345678901";
++    private Long meioPagamento = MeioPagamentoEnum.MERCADO_PAGO.getValue();
++    private String paymentMethodId = "visa";
++    private String token = "debug-token";
++    private Boolean salvarCarrinhoFavorito = false;
++    private String nomeCarrinhoFavorito = "Carrinho Favorito Debug";
++    private SituacaoPagamentoEnum situacaoPagamento = SituacaoPagamentoEnum.APROVADO;
++    private Long situacaoCompraRegistrada = SituacaoCompraEnum.FINALIZADA_TODAS_APOSTAS_EFETIVADAS.getValue();
++}
+diff --git a/src/main/java/br/caixa/loterias/resources/debug/model/CompraFlowDebugResponse.java b/src/main/java/br/caixa/loterias/resources/debug/model/CompraFlowDebugResponse.java
+new file mode 100644
+index 00000000..9ce0bb61
+--- /dev/null
++++ b/src/main/java/br/caixa/loterias/resources/debug/model/CompraFlowDebugResponse.java
+@@ -0,0 +1,25 @@
++package br.caixa.loterias.resources.debug.model;
++
++import java.util.ArrayList;
++import java.util.List;
++
++import lombok.Getter;
++import lombok.Setter;
++
++@Getter
++@Setter
++public class CompraFlowDebugResponse {
++
++    private Long compraId;
++    private String idExterno;
++    private String situacaoCompraFinal;
++    private String situacaoPagamentoFinal;
++    private Integer itensCompraveisPersistidos;
++    private Integer itensApostaPersistidos;
++    private Integer itensReservaPersistidos;
++    private Integer apostasIndividuaisCarrinho;
++    private Integer combosCarrinho;
++    private Integer reservasCarrinho;
++    private final List<String> etapasExecutadas = new ArrayList<>();
++    private final List<String> mensagensNeutralizadas = new ArrayList<>();
++}
+diff --git a/src/main/java/br/caixa/loterias/resources/debug/support/ByteBuddyRuntimeMocks.java b/src/main/java/br/caixa/loterias/resources/debug/support/ByteBuddyRuntimeMocks.java
+new file mode 100644
+index 00000000..241df3c3
+--- /dev/null
++++ b/src/main/java/br/caixa/loterias/resources/debug/support/ByteBuddyRuntimeMocks.java
+@@ -0,0 +1,109 @@
++package br.caixa.loterias.resources.debug.support;
++
++import java.lang.reflect.Field;
++import java.lang.reflect.InvocationHandler;
++import java.util.ArrayList;
++import java.util.Collections;
++import java.util.List;
++
++import net.bytebuddy.ByteBuddy;
++import net.bytebuddy.implementation.InvocationHandlerAdapter;
++import net.bytebuddy.matcher.ElementMatchers;
++
++public final class ByteBuddyRuntimeMocks {
++
++    private ByteBuddyRuntimeMocks() {
++    }
++
++    public static FieldOverrideSession session() {
++        return new FieldOverrideSession();
++    }
++
++    @SuppressWarnings("unchecked")
++    public static <T> T createInterfaceMock(Class<T> type, InvocationHandler handler) {
++        try {
++            Class<? extends T> generatedClass = (Class<? extends T>) new ByteBuddy()
++                    .subclass(Object.class)
++                    .implement(type)
++                    .method(ElementMatchers.not(ElementMatchers.isDeclaredBy(Object.class)))
++                    .intercept(InvocationHandlerAdapter.of(handler))
++                    .make()
++                    .load(type.getClassLoader())
++                    .getLoaded();
++
++            return generatedClass.getDeclaredConstructor().newInstance();
++        } catch (Exception exception) {
++            throw new IllegalStateException("Erro ao criar mock ByteBuddy para " + type.getName(), exception);
++        }
++    }
++
++    @SuppressWarnings("unchecked")
++    public static <T> T createSubclassMock(Class<T> type, String methodName, InvocationHandler handler) {
++        try {
++            Class<? extends T> generatedClass = (Class<? extends T>) new ByteBuddy()
++                    .subclass(type)
++                    .method(ElementMatchers.named(methodName))
++                    .intercept(InvocationHandlerAdapter.of(handler))
++                    .make()
++                    .load(type.getClassLoader())
++                    .getLoaded();
++
++            return generatedClass.getDeclaredConstructor().newInstance();
++        } catch (Exception exception) {
++            throw new IllegalStateException("Erro ao criar mock ByteBuddy para " + type.getName(), exception);
++        }
++    }
++
++    public static final class FieldOverrideSession implements AutoCloseable {
++
++        private final List<FieldOverride> overrides = new ArrayList<>();
++
++        public void replaceField(Object target, String fieldName, Object replacement) {
++            try {
++                Field field = findField(target.getClass(), fieldName);
++                field.setAccessible(true);
++                Object originalValue = field.get(target);
++                overrides.add(new FieldOverride(target, field, originalValue));
++                field.set(target, replacement);
++            } catch (Exception exception) {
++                throw new IllegalStateException("Erro ao substituir o campo " + fieldName, exception);
++            }
++        }
++
++        public List<String> describeOverrides() {
++            return overrides.stream()
++                    .map(override -> override.field().getDeclaringClass().getSimpleName() + "." + override.field().getName())
++                    .toList();
++        }
++
++        @Override
++        public void close() {
++            List<FieldOverride> reversed = new ArrayList<>(overrides);
++            Collections.reverse(reversed);
++
++            for (FieldOverride override : reversed) {
++                try {
++                    override.field().setAccessible(true);
++                    override.field().set(override.target(), override.originalValue());
++                } catch (Exception exception) {
++                    throw new IllegalStateException("Erro ao restaurar o campo " + override.field().getName(), exception);
++                }
++            }
++        }
++
++        private Field findField(Class<?> type, String fieldName) throws NoSuchFieldException {
++            Class<?> current = type;
++            while (current != null) {
++                try {
++                    return current.getDeclaredField(fieldName);
++                } catch (NoSuchFieldException ignored) {
++                    current = current.getSuperclass();
++                }
++            }
++            throw new NoSuchFieldException(fieldName);
++        }
++
++        private record FieldOverride(Object target, Field field, Object originalValue) {
++        }
++    }
++}
+diff --git a/src/main/resources/application.properties b/src/main/resources/application.properties
+index 8b48a211..d40231f4 100644
+--- a/src/main/resources/application.properties
++++ b/src/main/resources/application.properties
+@@ -53,6 +53,7 @@ app.feature.compra-registrada.enabled=${COMPRA_REGISTRADA_ENABLED:true}
+ app.feature.pagamento-estorno-processado.enabled=${PAGAMENTO_ESTORNO_PROCESSADO_ENABLED:true}
+ app.feature.pagamento-processado.enabled=${PAGAMENTO_PROCESSADO_ENABLED:true}
+ app.feature.pagamento-processado-dlq.enabled=${PAGAMENTO_PROCESSADO_DLQ_ENABLED:true}
++app.debug.compra-flow.enabled=${DEBUG_COMPRA_FLOW_ENABLED:false}
+ 
+ 
+ # WireMock server
+@@ -107,4 +108,4 @@ versao.sistema=1.0.0
+ quarkus.rest-client."silce-carrinho-api".connect-timeout=5000
+ quarkus.rest-client."silce-carrinho-api".read-timeout=15000
+ quarkus.rest-client."silce-apostador-api".connect-timeout=5000
+-quarkus.rest-client."silce-apostador-api".read-timeout=15000
+\ No newline at end of file
++quarkus.rest-client."silce-apostador-api".read-timeout=15000
