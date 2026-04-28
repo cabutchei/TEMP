@@ -1,0 +1,196 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>WAS Transaction Viewer</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="shell">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">WebSphere Transaction Trace</p>
+          <h1>WAS Transaction Viewer</h1>
+          <p class="subtitle">
+            Parse traditional WebSphere trace logs and inspect transactions,
+            XIDs, XA phases, and SQL in one place.
+          </p>
+        </div>
+        <div class="actions">
+          <label class="file-input">
+            <input id="fileInput" type="file" accept=".log,.txt" />
+            <span>Open log file</span>
+          </label>
+        </div>
+      </header>
+
+      <section class="ingest card">
+        <div class="ingest-copy">
+          <h2>Load a trace</h2>
+          <p>
+            Use a WebSphere diagnostic trace file such as
+            <code>jpa-sql.log</code> or your copied log file. The parser looks
+            for transaction begin/commit markers, XIDs, XA phases, and OpenJPA
+            SQL trace lines.
+          </p>
+        </div>
+        <div class="ingest-controls">
+          <button id="loadSampleButton" class="secondary">Use pasted text</button>
+          <button id="clearButton" class="ghost">Clear</button>
+        </div>
+        <div id="dropZone" class="drop-zone" aria-label="Drop log file here">
+          <p>Drag and drop a log file here</p>
+          <span>or use the Open log file button</span>
+        </div>
+        <textarea
+          id="pasteArea"
+          placeholder="Paste log contents here if you do not want to upload a file."
+        ></textarea>
+      </section>
+
+      <section id="summary" class="summary-grid"></section>
+
+      <section class="workspace">
+        <aside class="sidebar card">
+          <button
+            id="transactionsToggle"
+            class="panel-toggle"
+            type="button"
+            aria-expanded="true"
+            aria-controls="transactionsPanelBody"
+          >
+            <span>
+              <strong>Transactions</strong>
+              <small id="txCount">No log loaded</small>
+            </span>
+            <span class="panel-chevron">▾</span>
+          </button>
+
+          <div id="transactionsPanelBody" class="panel-body">
+	            <div class="filters">
+	              <input
+	                id="searchInput"
+	                type="search"
+	                placeholder="Search tx, xid, app, sql"
+	              />
+	              <select id="statusFilter">
+	                <option value="all">All statuses</option>
+	                <option value="committed">Committed</option>
+	                <option value="rolledback">Rolled back</option>
+	                <option value="active">Active / incomplete</option>
+	              </select>
+                <fieldset class="mode-filter-group">
+                  <legend>SQL modes</legend>
+                  <label class="mode-filter-option">
+                    <input id="modeExecuting" type="checkbox" value="executing" checked />
+                    <span>executing</span>
+                  </label>
+                  <label class="mode-filter-option">
+                    <input
+                      id="modeExecutingBatch"
+                      type="checkbox"
+                      value="executing batch"
+                      checked
+                    />
+                    <span>executing batch</span>
+                  </label>
+                  <label class="mode-filter-option">
+                    <input id="modeBatching" type="checkbox" value="batching" checked />
+                    <span>batching</span>
+                  </label>
+                </fieldset>
+	            </div>
+
+            <div id="txList" class="tx-list"></div>
+          </div>
+        </aside>
+
+        <main class="detail">
+          <section id="emptyState" class="card empty-state">
+            <h2>No transaction selected</h2>
+            <p>
+              Load a log, then select a transaction to inspect its timeline,
+              SQL, XA phases, and identifiers.
+            </p>
+          </section>
+
+          <section id="detailPanel" class="detail-panel hidden">
+            <div class="detail-top card">
+              <div>
+                <p class="eyebrow">Transaction</p>
+                <h2 id="detailTitle"></h2>
+                <p id="detailSubtitle" class="subtitle"></p>
+              </div>
+              <div class="detail-top-actions">
+                <button id="copyTxIdButton" class="secondary">Copy TX id</button>
+                <button id="copyXidButton" class="secondary">Copy XID</button>
+              </div>
+            </div>
+
+            <section id="detailStats" class="detail-stats"></section>
+
+            <section class="card collapsible-card">
+              <button
+                id="identifiersToggle"
+                class="panel-toggle section-toggle"
+                type="button"
+                aria-expanded="true"
+                aria-controls="identifiersPanelBody"
+              >
+                <span><strong>Identifiers</strong></span>
+                <span class="panel-chevron">▾</span>
+              </button>
+              <div id="identifiersPanelBody" class="panel-body">
+                <dl id="identifierGrid" class="identifier-grid"></dl>
+              </div>
+            </section>
+
+            <section class="card collapsible-card">
+              <button
+                id="timelineToggle"
+                class="panel-toggle section-toggle"
+                type="button"
+                aria-expanded="true"
+                aria-controls="timelinePanelBody"
+              >
+                <span><strong>Timeline</strong></span>
+                <span class="panel-chevron">▾</span>
+              </button>
+              <div id="timelinePanelBody" class="panel-body">
+                <div id="timeline" class="timeline"></div>
+              </div>
+            </section>
+
+            <section class="card collapsible-card">
+              <button
+                id="sqlToggle"
+                class="panel-toggle section-toggle"
+                type="button"
+                aria-expanded="true"
+                aria-controls="sqlPanelBody"
+	              >
+	                <span><strong>SQL</strong></span>
+	                <span class="panel-chevron">▾</span>
+	              </button>
+	              <div id="sqlPanelBody" class="panel-body">
+                  <div id="sqlFilterMeta" class="sql-filter-meta"></div>
+	                <div id="sqlList" class="sql-list"></div>
+	              </div>
+	            </section>
+          </section>
+        </main>
+      </section>
+    </div>
+
+    <template id="summaryCardTemplate">
+      <article class="summary-card card">
+        <p class="summary-label"></p>
+        <p class="summary-value"></p>
+        <p class="summary-meta"></p>
+      </article>
+    </template>
+
+    <script src="./app.js"></script>
+  </body>
+</html>
