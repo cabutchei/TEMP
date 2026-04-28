@@ -345,12 +345,69 @@ index 00000000..568ec6cd
 +END CATCH;
 +
 +SELECT 'Cleanup concluido.' AS resultado;
+diff --git a/src/main/java/br/caixa/loterias/resources/debug/CompraCleanupDebugResource.java b/src/main/java/br/caixa/loterias/resources/debug/CompraCleanupDebugResource.java
+new file mode 100644
+index 00000000..56c2e0b2
+--- /dev/null
++++ b/src/main/java/br/caixa/loterias/resources/debug/CompraCleanupDebugResource.java
+@@ -0,0 +1,51 @@
++package br.caixa.loterias.resources.debug;
++
++import org.eclipse.microprofile.openapi.annotations.tags.Tag;
++
++import br.caixa.loterias.resources.debug.model.CompraCleanupDebugRequest;
++import br.caixa.loterias.resources.debug.model.CompraCleanupDebugResponse;
++import br.caixa.loterias.resources.debug.support.CompraCleanupDebugSupport;
++import io.quarkus.arc.properties.IfBuildProperty;
++import jakarta.inject.Inject;
++import jakarta.persistence.EntityNotFoundException;
++import jakarta.ws.rs.Consumes;
++import jakarta.ws.rs.POST;
++import jakarta.ws.rs.Path;
++import jakarta.ws.rs.Produces;
++import jakarta.ws.rs.core.MediaType;
++import jakarta.ws.rs.core.Response;
++
++@Path("/debug/compra-cleanup")
++@Tag(name = "debug")
++@IfBuildProperty(name = "app.debug.compra-flow.enabled", stringValue = "true")
++public class CompraCleanupDebugResource {
++
++    @Inject
++    CompraCleanupDebugSupport compraCleanupDebugSupport;
++
++    @POST
++    @Path("/executar")
++    @Consumes(MediaType.APPLICATION_JSON)
++    @Produces(MediaType.APPLICATION_JSON)
++    public Response executar(CompraCleanupDebugRequest request) {
++        try {
++            return Response.ok(compraCleanupDebugSupport.cleanup(request)).build();
++        } catch (IllegalArgumentException exception) {
++            return buildErrorResponse(Response.Status.BAD_REQUEST, exception.getMessage(), request);
++        } catch (EntityNotFoundException exception) {
++            return buildErrorResponse(Response.Status.NOT_FOUND, exception.getMessage(), request);
++        }
++    }
++
++    private Response buildErrorResponse(Response.Status status, String mensagem, CompraCleanupDebugRequest request) {
++        CompraCleanupDebugResponse response = new CompraCleanupDebugResponse();
++        response.setMensagem(mensagem);
++
++        if (request != null) {
++            response.setCompraIdInformado(request.getCompraId());
++            response.setIdExternoInformado(request.getIdExterno());
++        }
++
++        return Response.status(status).entity(response).build();
++    }
++}
 diff --git a/src/main/java/br/caixa/loterias/resources/debug/CompraFlowDebugResource.java b/src/main/java/br/caixa/loterias/resources/debug/CompraFlowDebugResource.java
 new file mode 100644
-index 00000000..984d7647
+index 00000000..38950ac3
 --- /dev/null
 +++ b/src/main/java/br/caixa/loterias/resources/debug/CompraFlowDebugResource.java
-@@ -0,0 +1,403 @@
+@@ -0,0 +1,384 @@
 +package br.caixa.loterias.resources.debug;
 +
 +import java.lang.reflect.InvocationHandler;
@@ -508,36 +565,21 @@ index 00000000..984d7647
 +            SilceCarrinhoApiGetRecuperarCarrinhoResponse carrinhoFixture,
 +            CompraFlowDebugResponse response) {
 +
-+        SilceCarrinhoApiClient carrinhoMock = ByteBuddyRuntimeMocks.createInterfaceMock(
-+                SilceCarrinhoApiClient.class,
-+                carrinhoHandler(carrinhoFixture, response)
-+        );
++        SilceCarrinhoApiClient carrinhoMock = ByteBuddyRuntimeMocks.createInterfaceMock(SilceCarrinhoApiClient.class, carrinhoHandler(carrinhoFixture, response));
 +
-+        SilceApostadorApiClient apostadorMock = ByteBuddyRuntimeMocks.createInterfaceMock(
-+                SilceApostadorApiClient.class,
-+                apostadorHandler()
-+        );
++        SilceApostadorApiClient apostadorMock = ByteBuddyRuntimeMocks.createInterfaceMock(SilceApostadorApiClient.class, apostadorHandler());
 +
-+        SilceParametrosApiClient parametrosMock = ByteBuddyRuntimeMocks.createInterfaceMock(
-+                SilceParametrosApiClient.class,
-+                parametrosHandler()
-+        );
++        SilceParametrosApiClient parametrosMock = ByteBuddyRuntimeMocks.createInterfaceMock(SilceParametrosApiClient.class, parametrosHandler());
 +
-+        PagamentoSolicitarProducer pagamentoSolicitarProducerMock = ByteBuddyRuntimeMocks.createSubclassMock(
-+                PagamentoSolicitarProducer.class,
-+                "publish",
++        PagamentoSolicitarProducer pagamentoSolicitarProducerMock = ByteBuddyRuntimeMocks.createSubclassMock(PagamentoSolicitarProducer.class, "publish",
 +                innocuousProducerHandler("PagamentoSolicitarProducer.publish", response)
 +        );
 +
-+        RegistrarCompraProducer registrarCompraProducerMock = ByteBuddyRuntimeMocks.createSubclassMock(
-+                RegistrarCompraProducer.class,
-+                "publish",
++        RegistrarCompraProducer registrarCompraProducerMock = ByteBuddyRuntimeMocks.createSubclassMock(RegistrarCompraProducer.class, "publish",
 +                innocuousProducerHandler("RegistrarCompraProducer.publish", response)
 +        );
 +
-+        SolicitarEstornoProducer solicitarEstornoProducerMock = ByteBuddyRuntimeMocks.createSubclassMock(
-+                SolicitarEstornoProducer.class,
-+                "publish",
++        SolicitarEstornoProducer solicitarEstornoProducerMock = ByteBuddyRuntimeMocks.createSubclassMock(SolicitarEstornoProducer.class, "publish",
 +                innocuousProducerHandler("SolicitarEstornoProducer.publish", response)
 +        );
 +
@@ -666,18 +708,14 @@ index 00000000..984d7647
 +                criarApostaIndividual(103L, 8L, "01,02,03,04,05,06,07,08,09,10,11,12,13,14,15", 3.0, 5001L),
 +                criarApostaIndividual(104L, 20L, "01,02,03,04,05,06,07/ABC", 3.5, 6001L)
 +        ));
-+        response.setCombos(List.of(criarCombo()));
-+        response.setReservasCotas(List.of(criarReserva()));
-+        response.setValorTotal(35.5);
++        // response.setCombos(List.of(criarCombo()));
++        // response.setReservasCotas(List.of(criarReserva()));
++        // response.setValorTotal(35.5);
++        response.setValorTotal(14.00);
 +        return response;
 +    }
 +
-+    private CarrinhoApostaIndividualDTO criarApostaIndividual(
-+            Long id,
-+            Long modalidade,
-+            String prognosticos,
-+            Double valor,
-+            Long concursoAlvo) {
++    private CarrinhoApostaIndividualDTO criarApostaIndividual(Long id, Long modalidade, String prognosticos, Double valor, Long concursoAlvo) {
 +        CarrinhoApostaIndividualDTO aposta = new CarrinhoApostaIndividualDTO();
 +        aposta.setId(id);
 +        aposta.setIdModalidade(modalidade);
@@ -754,6 +792,72 @@ index 00000000..984d7647
 +                .build();
 +    }
 +}
+diff --git a/src/main/java/br/caixa/loterias/resources/debug/model/CompraCleanupDebugRequest.java b/src/main/java/br/caixa/loterias/resources/debug/model/CompraCleanupDebugRequest.java
+new file mode 100644
+index 00000000..20847bd1
+--- /dev/null
++++ b/src/main/java/br/caixa/loterias/resources/debug/model/CompraCleanupDebugRequest.java
+@@ -0,0 +1,12 @@
++package br.caixa.loterias.resources.debug.model;
++
++import lombok.Getter;
++import lombok.Setter;
++
++@Getter
++@Setter
++public class CompraCleanupDebugRequest {
++
++    private Long compraId;
++    private String idExterno;
++}
+diff --git a/src/main/java/br/caixa/loterias/resources/debug/model/CompraCleanupDebugResponse.java b/src/main/java/br/caixa/loterias/resources/debug/model/CompraCleanupDebugResponse.java
+new file mode 100644
+index 00000000..6f1ff6b2
+--- /dev/null
++++ b/src/main/java/br/caixa/loterias/resources/debug/model/CompraCleanupDebugResponse.java
+@@ -0,0 +1,42 @@
++package br.caixa.loterias.resources.debug.model;
++
++import java.util.ArrayList;
++import java.util.List;
++
++import lombok.Getter;
++import lombok.Setter;
++
++@Getter
++@Setter
++public class CompraCleanupDebugResponse {
++
++    private String mensagem;
++    private Long compraIdInformado;
++    private String idExternoInformado;
++
++    private final List<Long> compraIds = new ArrayList<>();
++    private final List<Long> pagamentoIds = new ArrayList<>();
++    private final List<Long> estornoIds = new ArrayList<>();
++    private final List<Long> itemCompravelIds = new ArrayList<>();
++    private final List<Long> apostaIds = new ArrayList<>();
++    private final List<Long> comboIds = new ArrayList<>();
++    private final List<Long> reservaIds = new ArrayList<>();
++    private final List<Long> bolaoIds = new ArrayList<>();
++    private final List<Long> apostadorIdsCandidatos = new ArrayList<>();
++
++    private final List<Long> pagamentosPreservados = new ArrayList<>();
++    private final List<Long> estornosPreservados = new ArrayList<>();
++    private final List<Long> combosPreservados = new ArrayList<>();
++    private final List<Long> boloesPreservados = new ArrayList<>();
++    private final List<Long> apostadoresPreservados = new ArrayList<>();
++
++    private Integer comprasDeletadas;
++    private Integer pagamentosDeletados;
++    private Integer estornosDeletados;
++    private Integer itensCompraveisDeletados;
++    private Integer apostasDeletadas;
++    private Integer combosDeletados;
++    private Integer reservasDeletadas;
++    private Integer boloesDeletados;
++    private Integer apostadoresDeletados;
++}
 diff --git a/src/main/java/br/caixa/loterias/resources/debug/model/CompraFlowDebugRequest.java b/src/main/java/br/caixa/loterias/resources/debug/model/CompraFlowDebugRequest.java
 new file mode 100644
 index 00000000..ea729589
@@ -815,10 +919,10 @@ index 00000000..9ce0bb61
 +}
 diff --git a/src/main/java/br/caixa/loterias/resources/debug/support/ByteBuddyRuntimeMocks.java b/src/main/java/br/caixa/loterias/resources/debug/support/ByteBuddyRuntimeMocks.java
 new file mode 100644
-index 00000000..241df3c3
+index 00000000..6af53f99
 --- /dev/null
 +++ b/src/main/java/br/caixa/loterias/resources/debug/support/ByteBuddyRuntimeMocks.java
-@@ -0,0 +1,109 @@
+@@ -0,0 +1,112 @@
 +package br.caixa.loterias.resources.debug.support;
 +
 +import java.lang.reflect.Field;
@@ -827,6 +931,7 @@ index 00000000..241df3c3
 +import java.util.Collections;
 +import java.util.List;
 +
++import io.quarkus.arc.ClientProxy;
 +import net.bytebuddy.ByteBuddy;
 +import net.bytebuddy.implementation.InvocationHandlerAdapter;
 +import net.bytebuddy.matcher.ElementMatchers;
@@ -880,12 +985,14 @@ index 00000000..241df3c3
 +        private final List<FieldOverride> overrides = new ArrayList<>();
 +
 +        public void replaceField(Object target, String fieldName, Object replacement) {
++            Object bean = ClientProxy.unwrap(target);
++
 +            try {
-+                Field field = findField(target.getClass(), fieldName);
++                Field field = findField(bean.getClass(), fieldName);
 +                field.setAccessible(true);
-+                Object originalValue = field.get(target);
-+                overrides.add(new FieldOverride(target, field, originalValue));
-+                field.set(target, replacement);
++                Object originalValue = field.get(bean);
++                overrides.add(new FieldOverride(bean, field, originalValue));
++                field.set(bean, replacement);
 +            } catch (Exception exception) {
 +                throw new IllegalStateException("Erro ao substituir o campo " + fieldName, exception);
 +            }
@@ -926,6 +1033,188 @@ index 00000000..241df3c3
 +
 +        private record FieldOverride(Object target, Field field, Object originalValue) {
 +        }
++    }
++}
+diff --git a/src/main/java/br/caixa/loterias/resources/debug/support/CompraCleanupDebugSupport.java b/src/main/java/br/caixa/loterias/resources/debug/support/CompraCleanupDebugSupport.java
+new file mode 100644
+index 00000000..ecfa3ede
+--- /dev/null
++++ b/src/main/java/br/caixa/loterias/resources/debug/support/CompraCleanupDebugSupport.java
+@@ -0,0 +1,176 @@
++package br.caixa.loterias.resources.debug.support;
++
++import java.util.ArrayList;
++import java.util.LinkedHashMap;
++import java.util.List;
++import java.util.Map;
++import java.util.stream.Collectors;
++
++import br.caixa.loterias.resources.debug.model.CompraCleanupDebugRequest;
++import br.caixa.loterias.resources.debug.model.CompraCleanupDebugResponse;
++import jakarta.enterprise.context.ApplicationScoped;
++import jakarta.persistence.EntityManager;
++import jakarta.persistence.EntityNotFoundException;
++import jakarta.persistence.Query;
++import jakarta.transaction.Transactional;
++import lombok.RequiredArgsConstructor;
++
++@ApplicationScoped
++@RequiredArgsConstructor
++public class CompraCleanupDebugSupport {
++
++    private final EntityManager entityManager;
++
++    @Transactional
++    public CompraCleanupDebugResponse cleanup(CompraCleanupDebugRequest request) {
++        CompraCleanupDebugRequest payload = request == null ? new CompraCleanupDebugRequest() : request;
++
++        if (payload.getCompraId() == null && isBlank(payload.getIdExterno())) {
++            throw new IllegalArgumentException("Informe compraId ou idExterno.");
++        }
++
++        CompraCleanupDebugResponse response = new CompraCleanupDebugResponse();
++        response.setCompraIdInformado(payload.getCompraId());
++        response.setIdExternoInformado(payload.getIdExterno());
++
++        List<Long> compraIds = findCompraIds(payload);
++        if (compraIds.isEmpty()) {
++            throw new EntityNotFoundException("Nenhuma compra encontrada para os parametros informados.");
++        }
++
++        List<Long> pagamentoIds = findIds("SELECT DISTINCT c.NU_PAGAMENTO FROM LCE._COMPRA c WHERE c.NU_COMPRA IN %s AND c.NU_PAGAMENTO IS NOT NULL", compraIds);
++        List<Long> estornoIds = findIds("SELECT DISTINCT p.NU_ESTORNO FROM LCE.PAGAMENTO p WHERE p.NU_PAGAMENTO IN %s AND p.NU_ESTORNO IS NOT NULL", pagamentoIds);
++        List<Long> itemIds = findIds("SELECT ic.NU_ITEM_COMPRAVEL FROM LCE._ITEM_COMPRAVEL ic WHERE ic.NU_COMPRA IN %s", compraIds);
++        List<Long> apostaIds = findIds("SELECT DISTINCT ic.NU_APOSTA FROM LCE._ITEM_COMPRAVEL ic WHERE ic.NU_COMPRA IN %s AND ic.NU_APOSTA IS NOT NULL", compraIds);
++        List<Long> comboIds = findIds("SELECT DISTINCT ai.NU_COMBO FROM LCE._APOSTA_INDIVIDUAL ai WHERE ai.NU_APOSTA IN %s AND ai.NU_COMBO IS NOT NULL", apostaIds);
++        List<Long> reservaIds = findIds("SELECT DISTINCT ic.NU_RESERVA_COTA_BOLAO FROM LCE._ITEM_COMPRAVEL ic WHERE ic.NU_COMPRA IN %s AND ic.NU_RESERVA_COTA_BOLAO IS NOT NULL", compraIds);
++        List<Long> bolaoIds = findIds("SELECT DISTINCT r.NU_BOLAO FROM LCE._RESERVA_COTA_BOLAO r WHERE r.NU_RESERVA_COTA_BOLAO IN %s AND r.NU_BOLAO IS NOT NULL", reservaIds);
++        List<Long> apostadorIds = findIds("SELECT DISTINCT c.NU_APOSTADOR FROM LCE._COMPRA c WHERE c.NU_COMPRA IN %s AND c.NU_APOSTADOR IS NOT NULL", compraIds);
++
++        response.getCompraIds().addAll(compraIds);
++        response.getPagamentoIds().addAll(pagamentoIds);
++        response.getEstornoIds().addAll(estornoIds);
++        response.getItemCompravelIds().addAll(itemIds);
++        response.getApostaIds().addAll(apostaIds);
++        response.getComboIds().addAll(comboIds);
++        response.getReservaIds().addAll(reservaIds);
++        response.getBolaoIds().addAll(bolaoIds);
++        response.getApostadorIdsCandidatos().addAll(apostadorIds);
++
++        response.setItensCompraveisDeletados(deleteByIds("LCE._ITEM_COMPRAVEL", "NU_ITEM_COMPRAVEL", itemIds));
++        response.setComprasDeletadas(deleteByIds("LCE._COMPRA", "NU_COMPRA", compraIds));
++        response.setApostasDeletadas(deleteByIds("LCE._APOSTA_INDIVIDUAL", "NU_APOSTA", apostaIds));
++
++        response.setCombosDeletados(deleteConditional(
++                "DELETE FROM LCE.COMBO WHERE NU_COMBO IN %s AND NOT EXISTS (SELECT 1 FROM LCE._APOSTA_INDIVIDUAL ai WHERE ai.NU_COMBO = LCE.COMBO.NU_COMBO)",
++                comboIds
++        ));
++
++        response.setReservasDeletadas(deleteByIds("LCE._RESERVA_COTA_BOLAO", "NU_RESERVA_COTA_BOLAO", reservaIds));
++
++        response.setBoloesDeletados(deleteConditional(
++                "DELETE FROM LCE._BOLAO WHERE NU_BOLAO IN %s AND NOT EXISTS (SELECT 1 FROM LCE._RESERVA_COTA_BOLAO r WHERE r.NU_BOLAO = LCE._BOLAO.NU_BOLAO)",
++                bolaoIds
++        ));
++
++        response.setPagamentosDeletados(deleteConditional(
++                "DELETE FROM LCE.PAGAMENTO WHERE NU_PAGAMENTO IN %s AND NOT EXISTS (SELECT 1 FROM LCE._COMPRA c WHERE c.NU_PAGAMENTO = LCE.PAGAMENTO.NU_PAGAMENTO)",
++                pagamentoIds
++        ));
++
++        response.setEstornosDeletados(deleteConditional(
++                "DELETE FROM LCE.ESTORNO WHERE NU_ESTORNO IN %s AND NOT EXISTS (SELECT 1 FROM LCE.PAGAMENTO p WHERE p.NU_ESTORNO = LCE.ESTORNO.NU_ESTORNO)",
++                estornoIds
++        ));
++
++        response.setApostadoresDeletados(deleteConditional(
++                "DELETE FROM LCE._APOSTADOR WHERE NU_APOSTADOR IN %s AND NOT EXISTS (SELECT 1 FROM LCE._COMPRA c WHERE c.NU_APOSTADOR = LCE._APOSTADOR.NU_APOSTADOR)",
++                apostadorIds
++        ));
++
++        response.getCombosPreservados().addAll(findExistingIds("LCE.COMBO", "NU_COMBO", comboIds));
++        response.getBoloesPreservados().addAll(findExistingIds("LCE._BOLAO", "NU_BOLAO", bolaoIds));
++        response.getPagamentosPreservados().addAll(findExistingIds("LCE.PAGAMENTO", "NU_PAGAMENTO", pagamentoIds));
++        response.getEstornosPreservados().addAll(findExistingIds("LCE.ESTORNO", "NU_ESTORNO", estornoIds));
++        response.getApostadoresPreservados().addAll(findExistingIds("LCE._APOSTADOR", "NU_APOSTADOR", apostadorIds));
++        response.setMensagem("Cleanup concluido.");
++
++        return response;
++    }
++
++    private List<Long> findCompraIds(CompraCleanupDebugRequest request) {
++        StringBuilder sql = new StringBuilder("SELECT c.NU_COMPRA FROM LCE._COMPRA c WHERE 1 = 0");
++        Map<String, Object> parameters = new LinkedHashMap<>();
++
++        if (request.getCompraId() != null) {
++            sql.append(" OR c.NU_COMPRA = :compraId");
++            parameters.put("compraId", request.getCompraId());
++        }
++
++        if (!isBlank(request.getIdExterno())) {
++            sql.append(" OR c.NU_ID_EXTERNO = :idExterno");
++            parameters.put("idExterno", request.getIdExterno());
++        }
++
++        Query query = entityManager.createNativeQuery(sql.toString());
++        parameters.forEach(query::setParameter);
++
++        return toLongList(query.getResultList());
++    }
++
++    private List<Long> findIds(String sqlTemplate, List<Long> ids) {
++        if (ids.isEmpty()) {
++            return List.of();
++        }
++
++        return toLongList(entityManager.createNativeQuery(sqlTemplate.formatted(inClause(ids))).getResultList());
++    }
++
++    private List<Long> findExistingIds(String tableName, String idColumn, List<Long> ids) {
++        if (ids.isEmpty()) {
++            return List.of();
++        }
++
++        String sql = "SELECT %s FROM %s WHERE %s IN %s".formatted(idColumn, tableName, idColumn, inClause(ids));
++        return toLongList(entityManager.createNativeQuery(sql).getResultList());
++    }
++
++    private int deleteByIds(String tableName, String idColumn, List<Long> ids) {
++        if (ids.isEmpty()) {
++            return 0;
++        }
++
++        String sql = "DELETE FROM %s WHERE %s IN %s".formatted(tableName, idColumn, inClause(ids));
++        return entityManager.createNativeQuery(sql).executeUpdate();
++    }
++
++    private int deleteConditional(String sqlTemplate, List<Long> ids) {
++        if (ids.isEmpty()) {
++            return 0;
++        }
++
++        return entityManager.createNativeQuery(sqlTemplate.formatted(inClause(ids))).executeUpdate();
++    }
++
++    private List<Long> toLongList(List<?> rawValues) {
++        if (rawValues == null || rawValues.isEmpty()) {
++            return List.of();
++        }
++
++        return rawValues.stream()
++                .map(Number.class::cast)
++                .map(Number::longValue)
++                .distinct()
++                .collect(Collectors.toCollection(ArrayList::new));
++    }
++
++    private String inClause(List<Long> ids) {
++        return ids.stream()
++                .map(String::valueOf)
++                .collect(Collectors.joining(", ", "(", ")"));
++    }
++
++    private boolean isBlank(String value) {
++        return value == null || value.isBlank();
 +    }
 +}
 diff --git a/src/main/resources/application.properties b/src/main/resources/application.properties
