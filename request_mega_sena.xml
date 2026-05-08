@@ -1,0 +1,27 @@
+<ns6:SERVICO_ENTRADA xmlns:ns6="http://caixa.gov.br/sispl/registra_apostas"
+                     xmlns:ns2="http://caixa.gov.br/sibar">
+  <ns2:HEADER>
+    <OPERACAO>702</OPERACAO>
+    ...
+  </ns2:HEADER>
+  <DADOS CPF_APOSTADOR="10660259672"
+         VALOR_TOTAL="2.00"
+         NSU_ORIGEM="321"
+         DATA="2001-05-03T01:02:03-03:00"
+         CD_MUNICIPIO="1"
+         CD_UF="3">
+    <UNIDADE_LOTERICA NU_CD="1111"/>
+    <CONCURSO NUMERO="1111" TIPO="1" MODALIDADE="2"/>
+    <JOGO_NUMERICO QUANTIDADE_TEIMOSINHAS="0" QUANTIDADE_DEZENAS="6">
+      <APOSTA_NUMERICA GERADO="false">
+        <DEZENA>1</DEZENA>
+        <DEZENA>2</DEZENA>
+        <DEZENA>3</DEZENA>
+        <DEZENA>4</DEZENA>
+        <DEZENA>5</DEZENA>
+        <DEZENA>6</DEZENA>
+      </APOSTA_NUMERICA>
+    </JOGO_NUMERICO>
+  </DADOS>
+</ns6:SERVICO_ENTRADA>
+

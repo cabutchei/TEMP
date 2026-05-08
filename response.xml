@@ -1,0 +1,13 @@
+<sispl_ra:SERVICO_SAIDA xmlns:sispl_ra="http://caixa.gov.br/sispl/registra_apostas"
+                        xmlns:sibar="http://caixa.gov.br/sibar">
+  <sibar:HEADER>...</sibar:HEADER>
+  <COD_RETORNO>0</COD_RETORNO>
+  <ORIGEM_RETORNO>SPLSB702</ORIGEM_RETORNO>
+  <MSG_RETORNO>Aposta 000000321 de 2001-02-03 registrada com sucesso.</MSG_RETORNO>
+  <DADOS NSBC="6124010D2F4371BB8EF199133B3698D6F46E"
+         NSU_ORIGEM="321"
+         DATA_ORIGEM="2001-02-03"
+         DATA_EFETIVACAO="2002-03-04"
+         HORA_EFETIVACAO="11:22:33"/>
+</sispl_ra:SERVICO_SAIDA>
+
